@@ -56,7 +56,11 @@ public:
 class BString: public BNode {
 protected:
     void present(std::ostream& os) const override {
-        os << "“" << value << "”";
+        if (value.size() <= 50) {
+            os << "“" << value << "”";
+        } else {
+            os << "<# string of length " << value.size() << " #>";
+        }
     }
 
 public:
@@ -111,7 +115,7 @@ protected:
             os << "{}";
         } else {
             os << "{";
-            for (const auto& [key, val]: dict) os << " " << key.value << ": " << *val;
+            for (const auto& [key, val]: dict) os << " " << key.value << ": " << *val << ";";
             os << " }";
         }
     }

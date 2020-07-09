@@ -13,11 +13,13 @@ std::optional<std::pair<std::unique_ptr<BInt>, uint64_t>> BInt::decode(const std
         idx++;
     }
 
+    std::string number_as_seen;
     while (idx < bdata.size() and std::isdigit(bdata[idx])) {
-        if (value == 0 and bdata[idx] == '0') return {};
+        number_as_seen += bdata[idx];
         value = 10*value + (bdata[idx] - '0');
         idx++;
     }
+    if (number_as_seen.size() >= 2 and number_as_seen[0] == 0) return {};
     if (idx >= bdata.size()) return {};
 
     if (!eat(bdata, idx, 'e')) return {};
