@@ -3,11 +3,11 @@
 #include <cassert>
 
 #include "bencoding.h"
+#include "url_encoding.h"
 
 int main() {
     using std::cout, std::endl;
 
-    // assert(false);
     std::ifstream example_file;
     example_file.open("/home/julian/ntorrent/example.torrent", std::ios::binary);
     assert(example_file.is_open());
@@ -18,6 +18,9 @@ int main() {
     cout << got.has_value() << endl;
 
     cout << *got.value().first << endl;
+
+    cout << url_encode("ałajć~") << endl;
+    cout << url_decode(url_encode("ałajć~")).value() << endl;
 
     return 0;
 }
