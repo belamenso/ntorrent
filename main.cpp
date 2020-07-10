@@ -3,11 +3,11 @@
 #include <cassert>
 #include <memory>
 
-#include "bencoding.h"
-#include "url_encoding.h"
-#include "tracker_response.h"
-#include "metainfo.h"
-#include "sha1.h"
+#include "src/bencoding.h"
+#include "src/url_encoding.h"
+#include "src/tracker_response.h"
+#include "src/metainfo.h"
+#include "src/sha1.h"
 
 int main() {
     using std::cout, std::endl;
