@@ -5,6 +5,7 @@
 #include "bencoding.h"
 
 std::optional<std::pair<std::unique_ptr<BInt>, uint64_t>> BInt::decode(const std::string& bdata, uint64_t idx) {
+    const uint64_t beg = idx;
     if (!eat(bdata, idx, 'i')) return {};
 
     int64_t value = 0, sign = 1;
@@ -24,11 +25,12 @@ std::optional<std::pair<std::unique_ptr<BInt>, uint64_t>> BInt::decode(const std
 
     if (!eat(bdata, idx, 'e')) return {};
     if (sign == -1 and value == 0) return {};
-    return {{ std::make_unique<BInt>(value * sign), idx }};
+    return {{ std::make_unique<BInt>(value * sign, beg, idx), idx }};
 }
 
 
 std::optional<std::pair<std::unique_ptr<BString>, uint64_t>> BString::decode(const std::string& bdata, uint64_t idx) {
+    const uint64_t beg = idx;
     if (bdata.size() <= idx) return {};
     uint64_t length = 0;
     if (!std::isdigit(bdata[idx])) return {};
@@ -37,11 +39,12 @@ std::optional<std::pair<std::unique_ptr<BString>, uint64_t>> BString::decode(con
     }
     if (!eat(bdata, idx, ':')) return {};
     if (bdata.size() - idx < length) return {};
-    return {{ std::make_unique<BString>(bdata.substr(idx, length)), idx + length }};
+    return {{ std::make_unique<BString>(bdata.substr(idx, length), beg, idx + length), idx + length }};
 }
 
 
 std::optional<std::pair<std::unique_ptr<BList>, uint64_t>> BList::decode(const std::string& bdata, uint64_t idx) {
+    const uint64_t beg = idx;
     if (bdata.size() <= idx) return {};
     if (!eat(bdata, idx, 'l')) return {};
     std::vector<std::unique_ptr<BNode>> elements;
@@ -53,11 +56,12 @@ std::optional<std::pair<std::unique_ptr<BList>, uint64_t>> BList::decode(const s
     }
     if (bdata.size() <= idx) return {};
     if (!eat(bdata, idx, 'e')) return {};
-    return {{ std::make_unique<BList>(std::move(elements)), idx }};
+    return {{ std::make_unique<BList>(std::move(elements), beg, idx), idx }};
 }
 
 
 std::optional<std::pair<std::unique_ptr<BDictionary>, uint64_t>> BDictionary::decode(const std::string& bdata, uint64_t idx) {
+    const uint64_t beg = idx;
     if (bdata.size() <= idx) return {};
     if (!eat(bdata, idx, 'd')) return {};
     std::map<BString, std::unique_ptr<BNode>> dict;
@@ -73,7 +77,7 @@ std::optional<std::pair<std::unique_ptr<BDictionary>, uint64_t>> BDictionary::de
     }
     if (bdata.size() <= idx) return {};
     if (!eat(bdata, idx, 'e')) return {};
-    return {{ std::make_unique<BDictionary>(std::move(dict)), idx }};
+    return {{ std::make_unique<BDictionary>(std::move(dict), beg, idx), idx }};
 }
 
 

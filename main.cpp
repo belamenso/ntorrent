@@ -32,5 +32,7 @@ int main() {
     std::shared_ptr<BNode> shared = std::move(got.value().first);
     auto parsed = metainfo::parse(shared);
     cout << parsed << endl;
+
+    assert( metainfo::info_hash(buffer.str(), shared) == metainfo::info_hash(shared) );
     cout << metainfo::info_hash(shared) << endl;
 }

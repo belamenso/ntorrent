@@ -5,10 +5,11 @@
 #ifndef NTORRENT_METAINFO_H
 #define NTORRENT_METAINFO_H
 
+#include <ctime>
 #include <memory>
 #include <string>
 #include <vector>
-#include <ctime>
+#include <limits>
 #include <ostream>
 #include <optional>
 #include <stdexcept>
@@ -115,6 +116,16 @@ public:
         if (0 == root_dict.count(BString("info"))) throw std::domain_error("No 'info' field.");
         auto info = dynamic_cast<BDictionary*>(root.get());
         return sha1sum(info->encode());
+    }
+
+
+    static string info_hash(const string& data, const std::shared_ptr<BNode>& root) {
+        const auto& root_dict = dynamic_cast<BDictionary*>(root.get())->dict;
+        if (0 == root_dict.count(BString("info"))) throw std::domain_error("No 'info' field.");
+        auto info = dynamic_cast<BDictionary*>(root.get());
+        if (data.size() <= info->beg or data.size()+1 <= info->end)
+            throw std::domain_error("Incorrect original slice encoding in the 'info' dictionary.");
+        return sha1sum(data.substr(info->beg, info->end - info->beg));
     }
 
 

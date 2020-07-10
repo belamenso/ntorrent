@@ -14,6 +14,8 @@
 #include <utility>
 #include <sstream>
 #include <memory>
+#include <limits>
+
 
 class BNode {
 protected:
@@ -24,7 +26,13 @@ protected:
 
     virtual void present(std::ostream& os) const = 0;
 
+    BNode(uint64_t beg, uint64_t end) : beg(beg), end(end) {}
+
+    BNode() : BNode(std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::max()) {}
+
 public:
+    const uint64_t beg, end;
+
     static std::optional<std::pair<std::unique_ptr<BNode>, uint64_t>> decode(const std::string& bdata, uint64_t idx=0);
 
     [[nodiscard]] virtual std::string encode() const = 0;
@@ -34,6 +42,7 @@ public:
         return os;
     }
 };
+
 
 class BInt: public BNode {
 protected:
@@ -46,12 +55,15 @@ public:
 
     explicit BInt(int64_t value) : value(value) {}
 
+    BInt(int64_t value, uint64_t beg, uint64_t end) : BNode(beg, end), value(value) {}
+
     static std::optional<std::pair<std::unique_ptr<BInt>, uint64_t>> decode(const std::string& bdata, uint64_t idx=0);
 
     [[nodiscard]] std::string encode() const override {
         return "i" + std::to_string(value) + "e";
     }
 };
+
 
 class BString: public BNode {
 protected:
@@ -68,6 +80,8 @@ public:
 
     explicit BString(std::string value) : value(std::move(value)) {}
 
+    BString(std::string value, uint64_t beg, uint64_t end) : BNode(beg, end), value(std::move(value)) {}
+
     [[nodiscard]] std::string encode() const override {
         return std::to_string(value.size()) + ":" + value;
     }
@@ -78,6 +92,7 @@ public:
         return value < other.value; // TODO is this based on binary encoding?
     }
 };
+
 
 class BList: public BNode {
 protected:
@@ -96,6 +111,9 @@ public:
 
     explicit BList(std::vector<std::unique_ptr<BNode>> elements) : elements(std::move(elements)) {}
 
+    BList(std::vector<std::unique_ptr<BNode>> elements, uint64_t beg, uint64_t end)
+    : BNode(beg, end), elements(std::move(elements)) {}
+
     [[nodiscard]] std::string encode() const override {
         std::stringstream ret;
         ret << "l";
@@ -107,6 +125,7 @@ public:
 
     static std::optional<std::pair<std::unique_ptr<BList>, uint64_t>> decode(const std::string& bdata, uint64_t idx=0);
 };
+
 
 class BDictionary: public BNode {
 protected:
@@ -125,6 +144,9 @@ public:
 
     explicit BDictionary(std::map<BString, std::unique_ptr<BNode>> dict) : dict(std::move(dict)) {}
 
+    BDictionary(std::map<BString, std::unique_ptr<BNode>> dict, uint64_t beg, uint64_t end)
+    : BNode(beg, end), dict(std::move(dict)) {}
+
     static std::optional<std::pair<std::unique_ptr<BDictionary>, uint64_t>> decode(const std::string& bdata, uint64_t idx=0);
 
     [[nodiscard]] std::string encode() const override {
@@ -136,5 +158,6 @@ public:
         return ss.str();
     }
 };
+
 
 #endif //NTORRENT_BENCODING_H
