@@ -200,7 +200,7 @@ struct tracker_scrape {
         if (dict.has_typed("flags", bdictionary_t)) {
             const auto& flags_dict = *dynamic_cast<bdictionary*>(dict.dict.at(bstring("flags")).get());
             if (flags_dict.has_typed("min_request_interval", bint_t)) {
-                flag_min_request_interval = { flags_dict.get_int("min_request_interval") };
+                flag_min_request_interval = { flags_dict.get_int("min_request_interval").value() };
             }
         }
 
