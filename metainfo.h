@@ -114,7 +114,7 @@ public:
     static string info_hash(const std::shared_ptr<BNode>& root) {
         const auto& root_dict = dynamic_cast<BDictionary*>(root.get())->dict;
         if (0 == root_dict.count(BString("info"))) throw std::domain_error("No 'info' field.");
-        auto info = dynamic_cast<BDictionary*>(root.get());
+        auto info = dynamic_cast<BDictionary*>(root_dict.at(BString("info")).get());
         return sha1sum(info->encode());
     }
 
@@ -122,7 +122,7 @@ public:
     static string info_hash(const string& data, const std::shared_ptr<BNode>& root) {
         const auto& root_dict = dynamic_cast<BDictionary*>(root.get())->dict;
         if (0 == root_dict.count(BString("info"))) throw std::domain_error("No 'info' field.");
-        auto info = dynamic_cast<BDictionary*>(root.get());
+        auto info = dynamic_cast<BDictionary*>(root_dict.at(BString("info")).get());
         if (data.size() <= info->beg or data.size()+1 <= info->end)
             throw std::domain_error("Incorrect original slice encoding in the 'info' dictionary.");
         return sha1sum(data.substr(info->beg, info->end - info->beg));
