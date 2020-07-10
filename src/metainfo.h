@@ -111,26 +111,26 @@ public:
     }
 
 
-    static string info_hash(const std::shared_ptr<BNode>& root) {
-        const auto& root_dict = dynamic_cast<BDictionary*>(root.get())->dict;
-        if (0 == root_dict.count(BString("info"))) throw std::domain_error("No 'info' field.");
-        auto info = dynamic_cast<BDictionary*>(root_dict.at(BString("info")).get());
+    static string info_hash(const std::shared_ptr<bnode>& root) {
+        const auto& root_dict = dynamic_cast<bdictionary*>(root.get())->dict;
+        if (0 == root_dict.count(bstring("info"))) throw std::domain_error("No 'info' field.");
+        auto info = dynamic_cast<bdictionary*>(root_dict.at(bstring("info")).get());
         return sha1sum(info->encode());
     }
 
 
-    static string info_hash(const string& data, const std::shared_ptr<BNode>& root) {
-        const auto& root_dict = dynamic_cast<BDictionary*>(root.get())->dict;
-        if (0 == root_dict.count(BString("info"))) throw std::domain_error("No 'info' field.");
-        auto info = dynamic_cast<BDictionary*>(root_dict.at(BString("info")).get());
+    static string info_hash(const string& data, const std::shared_ptr<bnode>& root) {
+        const auto& root_dict = dynamic_cast<bdictionary*>(root.get())->dict;
+        if (0 == root_dict.count(bstring("info"))) throw std::domain_error("No 'info' field.");
+        auto info = dynamic_cast<bdictionary*>(root_dict.at(bstring("info")).get());
         if (data.size() <= info->beg or data.size()+1 <= info->end)
             throw std::domain_error("Incorrect original slice encoding in the 'info' dictionary.");
         return sha1sum(data.substr(info->beg, info->end - info->beg));
     }
 
 
-    static metainfo parse(const std::shared_ptr<BNode>& root) {
-        const auto& dict = (dynamic_cast<BDictionary const *>(root.get()))->dict;
+    static metainfo parse(const std::shared_ptr<bnode>& root) {
+        const auto& dict = (dynamic_cast<bdictionary const *>(root.get()))->dict;
 
         uint64_t piece_length;
         string pieces;
@@ -144,89 +144,89 @@ public:
         optional<string> created_by;
         optional<string> encoding;
 
-        if (0 == dict.count(BString("info"))) throw std::domain_error("No 'info' field.");
-        const auto& info_dict = dynamic_cast<BDictionary*>(dict.at(BString("info")).get())->dict;
+        if (0 == dict.count(bstring("info"))) throw std::domain_error("No 'info' field.");
+        const auto& info_dict = dynamic_cast<bdictionary*>(dict.at(bstring("info")).get())->dict;
 
-        if (0 == info_dict.count(BString("piece length"))) throw std::domain_error("No 'piece length' field.");
-        piece_length = static_cast<uint64_t>(dynamic_cast<BInt*>(info_dict.at(BString("piece length")).get())->value);
+        if (0 == info_dict.count(bstring("piece length"))) throw std::domain_error("No 'piece length' field.");
+        piece_length = static_cast<uint64_t>(dynamic_cast<bint*>(info_dict.at(bstring("piece length")).get())->value);
 
-        if (0 == info_dict.count(BString("pieces"))) throw std::domain_error("No 'pieces' field.");
-        pieces = dynamic_cast<BString*>(info_dict.at(BString("pieces")).get())->value;
+        if (0 == info_dict.count(bstring("pieces"))) throw std::domain_error("No 'pieces' field.");
+        pieces = dynamic_cast<bstring*>(info_dict.at(bstring("pieces")).get())->value;
         if (pieces.length() % 20) throw std::domain_error("'pieces' field should have length dividable by 20.");
 
-        if (0 == info_dict.count(BString("private"))) {
+        if (0 == info_dict.count(bstring("private"))) {
             private_ = false;
         } else {
-            int64_t got = dynamic_cast<BInt*>(info_dict.at(BString("private")).get())->value;
+            int64_t got = dynamic_cast<bint*>(info_dict.at(bstring("private")).get())->value;
             if (not (got == 0 or got == 1))
                 throw std::domain_error("Field 'private' must be either 0 or 1, not " + std::to_string(got));
             private_ = got == 1;
         }
 
-        if (0 == info_dict.count(BString("name"))) throw std::domain_error("No 'name' field.");
-        name = dynamic_cast<BString*>(info_dict.at(BString("name")).get())->value;
+        if (0 == info_dict.count(bstring("name"))) throw std::domain_error("No 'name' field.");
+        name = dynamic_cast<bstring*>(info_dict.at(bstring("name")).get())->value;
 
-        if (0 == dict.count(BString("announce"))) throw std::domain_error("No 'announce' field.");
-        announce = dynamic_cast<BString*>(dict.at(BString("announce")).get())->value;
+        if (0 == dict.count(bstring("announce"))) throw std::domain_error("No 'announce' field.");
+        announce = dynamic_cast<bstring*>(dict.at(bstring("announce")).get())->value;
 
-        if (1 <= dict.count(BString("announce-list"))) {
-            const auto& got_list = dynamic_cast<BList*>(dict.at(BString("announce-list")).get())->elements;
+        if (1 <= dict.count(bstring("announce-list"))) {
+            const auto& got_list = dynamic_cast<blist*>(dict.at(bstring("announce-list")).get())->elements;
             announce_list = { vector<vector<string>>() };
             for (const auto& inner_list: got_list) {
                 announce_list.value().emplace_back();
-                for (const auto& str: dynamic_cast<BList*>(inner_list.get())->elements)
-                    announce_list.value().back().push_back( dynamic_cast<BString*>(str.get())->value );
+                for (const auto& str: dynamic_cast<blist*>(inner_list.get())->elements)
+                    announce_list.value().back().push_back( dynamic_cast<bstring*>(str.get())->value );
             }
         }
 
-        if (1 == dict.count(BString("creation date")))
+        if (1 == dict.count(bstring("creation date")))
             creation_date = { static_cast<uint64_t>(
-                                    dynamic_cast<BInt*>(dict.at(BString("creation date")).get())->value) };
+                                    dynamic_cast<bint*>(dict.at(bstring("creation date")).get())->value) };
 
-        if (1 == dict.count(BString("comment")))
-            comment = { dynamic_cast<BString*>(dict.at(BString("comment")).get())->value };
+        if (1 == dict.count(bstring("comment")))
+            comment = { dynamic_cast<bstring*>(dict.at(bstring("comment")).get())->value };
 
-        if (1 == dict.count(BString("created by")))
-            created_by = { dynamic_cast<BString*>(dict.at(BString("created by")).get())->value };
+        if (1 == dict.count(bstring("created by")))
+            created_by = { dynamic_cast<bstring*>(dict.at(bstring("created by")).get())->value };
 
-        if (1 == dict.count(BString("encoding")))
-            encoding = { dynamic_cast<BString*>(dict.at(BString("encoding")).get())->value };
+        if (1 == dict.count(bstring("encoding")))
+            encoding = { dynamic_cast<bstring*>(dict.at(bstring("encoding")).get())->value };
 
-        if (1 == info_dict.count(BString("length"))) { /// XXX Single File Mode
+        if (1 == info_dict.count(bstring("length"))) { /// XXX Single File Mode
             optional<string> md5sum;
-            if (1 == info_dict.count(BString("md5sum"))) {
-                md5sum = {dynamic_cast<BString *>(info_dict.at(BString("md5sum")).get())->value};
+            if (1 == info_dict.count(bstring("md5sum"))) {
+                md5sum = {dynamic_cast<bstring *>(info_dict.at(bstring("md5sum")).get())->value};
                 if (not valid_md5sum_format(md5sum.value())) throw std::domain_error("Invalid md5 sum format.");
             }
-            if (0 == info_dict.count(BString("length")))
+            if (0 == info_dict.count(bstring("length")))
                 throw std::domain_error("No 'length' field in the single file mode.");
-            uint64_t length = static_cast<uint64_t>(dynamic_cast<BInt*>(info_dict.at(BString("length")).get())->value);
+            uint64_t length = static_cast<uint64_t>(dynamic_cast<bint*>(info_dict.at(bstring("length")).get())->value);
 
             files.emplace_back( length, md5sum, vector<string>({name}) );
         } else { /// XXX Multiple Files Mode
-            if (0 == info_dict.count(BString("files")))
+            if (0 == info_dict.count(bstring("files")))
                 throw std::domain_error("No 'files' field in the multiple file mode.");
-            const auto& files_field = dynamic_cast<BList*>(info_dict.at(BString("files")).get())->elements;
+            const auto& files_field = dynamic_cast<blist*>(info_dict.at(bstring("files")).get())->elements;
             for (const auto& file_dict_entry: files_field) {
-                const auto& file_dict = dynamic_cast<BDictionary*>(file_dict_entry.get())->dict;
+                const auto& file_dict = dynamic_cast<bdictionary*>(file_dict_entry.get())->dict;
 
                 uint64_t length;
                 optional<string> md5sum;
                 vector<string> path { name };
 
-                if (0 == file_dict.count(BString("length")))
+                if (0 == file_dict.count(bstring("length")))
                     throw std::domain_error("No 'length' field in an entry of 'files' dictionary.");
-                length = static_cast<uint64_t>(dynamic_cast<BInt*>(file_dict.at(BString("length")).get())->value);
+                length = static_cast<uint64_t>(dynamic_cast<bint*>(file_dict.at(bstring("length")).get())->value);
 
-                if (1 == file_dict.count(BString("md5sum"))) {
-                    md5sum = {dynamic_cast<BString *>(file_dict.at(BString("md5sum")).get())->value};
+                if (1 == file_dict.count(bstring("md5sum"))) {
+                    md5sum = {dynamic_cast<bstring *>(file_dict.at(bstring("md5sum")).get())->value};
                     if (not valid_md5sum_format(md5sum.value())) throw std::domain_error("Invalid md5 sum format.");
                 }
 
-                if (0 == file_dict.count(BString("path")))
+                if (0 == file_dict.count(bstring("path")))
                     throw std::domain_error("No 'path' field in an entry of 'files' dictionary.");
-                for (const auto& path_el: dynamic_cast<BList*>(file_dict.at(BString("path")).get())->elements)
-                    path.push_back( dynamic_cast<BString*>(path_el.get())->value );
+                for (const auto& path_el: dynamic_cast<blist*>(file_dict.at(bstring("path")).get())->elements)
+                    path.push_back( dynamic_cast<bstring*>(path_el.get())->value );
 
                 files.emplace_back( length, md5sum, path );
             }

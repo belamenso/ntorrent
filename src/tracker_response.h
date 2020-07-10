@@ -68,11 +68,11 @@ struct tracker_response {
     }
 
 
-    static optional<std::variant<string, tracker_response>> parse(const std::shared_ptr<BNode>& root) {
-        const auto& dict = dynamic_cast<BDictionary*>(root.get())->dict;
+    static optional<std::variant<string, tracker_response>> parse(const std::shared_ptr<bnode>& root) {
+        const auto& dict = dynamic_cast<bdictionary*>(root.get())->dict;
 
-        if (1 == dict.count(BString("failure reason")))
-            return { dynamic_cast<BString*>(dict.at(BString("failure reason")).get())->value };
+        if (1 == dict.count(bstring("failure reason")))
+            return { dynamic_cast<bstring*>(dict.at(bstring("failure reason")).get())->value };
 
         optional<string> warning_message;
         uint64_t interval;
@@ -82,46 +82,46 @@ struct tracker_response {
         uint64_t incomplete;
         vector<peer> peers;
 
-        if (1 == dict.count(BString("warning message")))
-            warning_message = { dynamic_cast<BString*>(dict.at(BString("warning message")).get())->value };
+        if (1 == dict.count(bstring("warning message")))
+            warning_message = { dynamic_cast<bstring*>(dict.at(bstring("warning message")).get())->value };
 
-        if (0 == dict.count(BString("interval"))) return {};
-        interval = dynamic_cast<BInt*>(dict.at(BString("interval")).get())->value;
+        if (0 == dict.count(bstring("interval"))) return {};
+        interval = dynamic_cast<bint*>(dict.at(bstring("interval")).get())->value;
 
-        if (1 == dict.count(BString("min interval")))
-            min_interval = { dynamic_cast<BInt*>(dict.at(BString("min interval")).get())->value };
+        if (1 == dict.count(bstring("min interval")))
+            min_interval = { dynamic_cast<bint*>(dict.at(bstring("min interval")).get())->value };
 
-        if (1 == dict.count(BString("tracker id")))
-            tracker_id = { dynamic_cast<BString*>(dict.at(BString("tracker id")).get())->value };
+        if (1 == dict.count(bstring("tracker id")))
+            tracker_id = { dynamic_cast<bstring*>(dict.at(bstring("tracker id")).get())->value };
 
-        if (0 == dict.count(BString("complete"))) return {};
-        complete = dynamic_cast<BInt*>(dict.at(BString("complete")).get())->value;
+        if (0 == dict.count(bstring("complete"))) return {};
+        complete = dynamic_cast<bint*>(dict.at(bstring("complete")).get())->value;
 
-        if (0 == dict.count(BString("incomplete"))) return {};
-        incomplete = dynamic_cast<BInt*>(dict.at(BString("incomplete")).get())->value;
+        if (0 == dict.count(bstring("incomplete"))) return {};
+        incomplete = dynamic_cast<bint*>(dict.at(bstring("incomplete")).get())->value;
 
-        if (0 == dict.count(BString("peers"))) return {};
+        if (0 == dict.count(bstring("peers"))) return {};
 
-        BList* peers_list_ptr = dynamic_cast<BList*>(dict.at(BString("peers")).get());
+        blist* peers_list_ptr = dynamic_cast<blist*>(dict.at(bstring("peers")).get());
         if (peers_list_ptr != nullptr) { /// XXX dictionary model
             for (const auto& peer: peers_list_ptr->elements) {
-                const auto& peer_dict = dynamic_cast<BDictionary*>(peer.get())->dict;
+                const auto& peer_dict = dynamic_cast<bdictionary*>(peer.get())->dict;
                 string peer_id, ip;
                 uint64_t port;
 
-                if (0 == peer_dict.count(BString("peer id"))) return {};
-                peer_id = dynamic_cast<BString*>(peer_dict.at(BString("peer id")).get())->value;
+                if (0 == peer_dict.count(bstring("peer id"))) return {};
+                peer_id = dynamic_cast<bstring*>(peer_dict.at(bstring("peer id")).get())->value;
 
-                if (0 == peer_dict.count(BString("ip"))) return {};
-                ip = dynamic_cast<BString*>(peer_dict.at(BString("ip")).get())->value;
+                if (0 == peer_dict.count(bstring("ip"))) return {};
+                ip = dynamic_cast<bstring*>(peer_dict.at(bstring("ip")).get())->value;
 
-                if (0 == peer_dict.count(BString("port"))) return {};
-                port = dynamic_cast<BInt*>(peer_dict.at(BString("port")).get())->value;
+                if (0 == peer_dict.count(bstring("port"))) return {};
+                port = dynamic_cast<bint*>(peer_dict.at(bstring("port")).get())->value;
 
                 peers.emplace_back( optional<string>(peer_id), ip, port );
             }
         } else { /// XXX binary model
-            BString* peers_str_ptr = dynamic_cast<BString*>(dict.at(BString("peers")).get());
+            bstring* peers_str_ptr = dynamic_cast<bstring*>(dict.at(bstring("peers")).get());
             if (peers_str_ptr == nullptr) return {};
             const string& peers_str = peers_str_ptr->value;
             if (peers_str.size() % 6) return {};
@@ -188,44 +188,44 @@ struct tracker_scrape {
         return os;
     }
 
-    static optional<tracker_scrape> parse(const std::shared_ptr<BNode>& root) {
-        const auto& dict = dynamic_cast<BDictionary*>(root.get())->dict;
+    static optional<tracker_scrape> parse(const std::shared_ptr<bnode>& root) {
+        const auto& dict = dynamic_cast<bdictionary*>(root.get())->dict;
 
-        if (1 == dict.count(BString("failure reason"))) {
-            string failure_reason = dynamic_cast<BString*>(dict.at(BString("failure reason")).get())->value;
+        if (1 == dict.count(bstring("failure reason"))) {
+            string failure_reason = dynamic_cast<bstring*>(dict.at(bstring("failure reason")).get())->value;
             return { tracker_scrape({failure_reason}, {}, {}) };
         }
 
         map<string, scrape_file> files;
         optional<uint64_t> flag_min_request_interval;
 
-        if (1 == dict.count(BString("flags"))) {
-            const auto& flags_dict = dynamic_cast<BDictionary*>(dict.at(BString("flags")).get())->dict;
-            if (1 == flags_dict.count(BString("min_request_interval"))) {
+        if (1 == dict.count(bstring("flags"))) {
+            const auto& flags_dict = dynamic_cast<bdictionary*>(dict.at(bstring("flags")).get())->dict;
+            if (1 == flags_dict.count(bstring("min_request_interval"))) {
                 flag_min_request_interval =
-                        { dynamic_cast<BInt*>(flags_dict.at(BString("min_request_interval")).get())->value };
+                        { dynamic_cast<bint*>(flags_dict.at(bstring("min_request_interval")).get())->value };
             }
         }
 
-        if (0 == dict.count(BString("files"))) return {};
-        const auto& files_dict = dynamic_cast<BDictionary*>(dict.at(BString("files")).get())->dict;
+        if (0 == dict.count(bstring("files"))) return {};
+        const auto& files_dict = dynamic_cast<bdictionary*>(dict.at(bstring("files")).get())->dict;
         for (const auto& [ih, fd]: files_dict) {
             uint64_t complete, downloaded, incomplete;
             optional<string> name;
 
-            const auto& file_dict = dynamic_cast<BDictionary*>(fd.get())->dict;
+            const auto& file_dict = dynamic_cast<bdictionary*>(fd.get())->dict;
 
-            if (0 == file_dict.count(BString("complete"))) return {};
-            complete = dynamic_cast<BInt*>(file_dict.at(BString("complete")).get())->value;
+            if (0 == file_dict.count(bstring("complete"))) return {};
+            complete = dynamic_cast<bint*>(file_dict.at(bstring("complete")).get())->value;
 
-            if (0 == file_dict.count(BString("downloaded"))) return {};
-            downloaded = dynamic_cast<BInt*>(file_dict.at(BString("downloaded")).get())->value;
+            if (0 == file_dict.count(bstring("downloaded"))) return {};
+            downloaded = dynamic_cast<bint*>(file_dict.at(bstring("downloaded")).get())->value;
 
-            if (0 == file_dict.count(BString("incomplete"))) return {};
-            incomplete = dynamic_cast<BInt*>(file_dict.at(BString("incomplete")).get())->value;
+            if (0 == file_dict.count(bstring("incomplete"))) return {};
+            incomplete = dynamic_cast<bint*>(file_dict.at(bstring("incomplete")).get())->value;
 
-            if (1 == file_dict.count(BString("name")))
-                name = { dynamic_cast<BString*>(file_dict.at(BString("name")).get())->value };
+            if (1 == file_dict.count(bstring("name")))
+                name = { dynamic_cast<bstring*>(file_dict.at(bstring("name")).get())->value };
 
             if (0 != files.count(ih.value)) return {};
             files.insert({ih.value, std::move(scrape_file( complete, downloaded, incomplete, name ))});

@@ -20,7 +20,7 @@ int main() {
     std::stringstream buffer;
     buffer << example_file.rdbuf();
 
-    auto got = BNode::decode(buffer.str());
+    auto got = bnode::decode(buffer.str());
     assert(got.has_value());
 
     cout << *got.value().first << endl;
@@ -35,14 +35,14 @@ int main() {
     cout << endl;
 
     /// scrape
-    std::shared_ptr<BNode> shared = std::move(got.value().first);
+    std::shared_ptr<bnode> shared = std::move(got.value().first);
     auto parsed = tracker_scrape::parse(shared);
     assert(parsed.has_value());
     cout << parsed.value() << endl;
 
     /*
     /// tracker responses
-    std::shared_ptr<BNode> shared = std::move(got.value().first);
+    std::shared_ptr<bnode> shared = std::move(got.value().first);
     auto parsed = tracker_response::parse(shared);
     assert(parsed.has_value());
     assert(std::holds_alternative<tracker_response>(parsed.value()));
@@ -51,7 +51,7 @@ int main() {
 
     /*
     /// torrent files
-    std::shared_ptr<BNode> shared = std::move(got.value().first);
+    std::shared_ptr<bnode> shared = std::move(got.value().first);
     auto parsed = metainfo::parse(shared);
     cout << parsed << endl;
 
