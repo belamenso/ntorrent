@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <time.h>
 #include <ostream>
 #include <optional>
 #include <stdexcept>
@@ -72,12 +73,21 @@ public:
 
 
     friend std::ostream& operator << (std::ostream& os, const metainfo& mi) {
+        char date[30];
+        if (mi.creation_date.has_value()) {
+            // mi.creation_date.value()
+            time_t t = mi.creation_date.value();
+            tm *tm = localtime(&t);
+            strftime(date, sizeof(date)/sizeof(char), "%d.%m.%Y %T", tm);
+        }
+
         os << "{\n"
            << "  piece length: " << mi.piece_length << "\n"
-           << "  pieces: " << (mi.pieces.size() >= 50 ? ("<<string of length " + std::to_string(mi.pieces.size()) + ">>") : mi.pieces) << "\n"
+           << "  pieces: " << (mi.pieces.size() >= 50 ?
+                                ("<<string of length " + std::to_string(mi.pieces.size()) + ">>") : mi.pieces) << "\n"
            << "  private: " << mi.private_ << "\n"
            << "  announce: " << mi.announce << "\n"
-           << ((not mi.comment.has_value()) ? "" : ("  creation date: " + std::to_string(mi.creation_date.value()) + "\n"))
+           << ((not mi.creation_date.has_value()) ? "" : ("  creation date: " + string(date) + "\n"))
            << ((not mi.comment.has_value()) ? "" : ("  comment: " + mi.comment.value() + "\n"))
            << ((not mi.created_by.has_value()) ? "" : ("  created by: " + mi.created_by.value() + "\n"))
            << ((not mi.encoding.has_value()) ? "" : ("  encoding: " + mi.encoding.value() + "\n"))
