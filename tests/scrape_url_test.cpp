@@ -3,7 +3,7 @@
 //
 
 #define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include "../lib/catch.hpp"
 
 #include "../src/tracker_request.h"
 
