@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <cassert>
+#include <memory>
 
 #include "bencoding.h"
 #include "url_encoding.h"
@@ -28,9 +29,8 @@ int main() {
 
     cout << endl;
 
-    auto parsed = metainfo::parse(std::move(got.value().first));
+    std::shared_ptr<BNode> shared = std::move(got.value().first);
+    auto parsed = metainfo::parse(shared);
     cout << parsed << endl;
-
-    cout << sha1sum("The quick brown fox jumps over the lazy dog") << endl;
-    cout << sha1sum("The quick brown fox jumps over the lazy cog") << endl;
+    cout << metainfo::info_hash(shared) << endl;
 }

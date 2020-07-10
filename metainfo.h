@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <time.h>
+#include <ctime>
 #include <ostream>
 #include <optional>
 #include <stdexcept>
@@ -17,6 +17,7 @@
 using std::cout, std::endl;
 
 #include "bencoding.h"
+#include "sha1.h"
 
 using std::vector, std::string, std::optional;
 
@@ -53,7 +54,7 @@ struct file_description {
 class metainfo {
 protected:
     metainfo(uint64_t piece_length, string pieces, vector<file_description> files, bool private_, string announce,
-             optional<vector<string>> announce_list, optional<uint64_t> creation_date, optional<string> comment,
+             optional<vector<vector<string>>> announce_list, optional<uint64_t> creation_date, optional<string> comment,
              optional<string> created_by, optional<string> encoding)
     : piece_length(piece_length), pieces(std::move(pieces)), files(std::move(files)), private_(private_),
     announce(std::move(announce)), announce_list(std::move(announce_list)), creation_date(creation_date),
@@ -65,7 +66,7 @@ public:
     vector<file_description> files;
     bool private_ = false;
     string announce;
-    optional<vector<string>> announce_list;
+    optional<vector<vector<string>>> announce_list;
     optional<uint64_t> creation_date;
     optional<string> comment;
     optional<string> created_by;
@@ -86,8 +87,18 @@ public:
            << "  pieces: " << (mi.pieces.size() >= 50 ?
                                 ("<<string of length " + std::to_string(mi.pieces.size()) + ">>") : mi.pieces) << "\n"
            << "  private: " << mi.private_ << "\n"
-           << "  announce: " << mi.announce << "\n"
-           << ((not mi.creation_date.has_value()) ? "" : ("  creation date: " + string(date) + "\n"))
+           << "  announce: " << mi.announce << "\n";
+        if (mi.announce_list.has_value()) {
+            os << "  announce list: [\n";
+            for (const vector<string>& els: mi.announce_list.value()) {
+                os << "    [";
+                for (const string& el: els)
+                    os << " " << el;
+                os << " ]\n";
+            }
+            os << "  ]\n";
+        }
+        os << ((not mi.creation_date.has_value()) ? "" : ("  creation date: " + string(date) + "\n"))
            << ((not mi.comment.has_value()) ? "" : ("  comment: " + mi.comment.value() + "\n"))
            << ((not mi.created_by.has_value()) ? "" : ("  created by: " + mi.created_by.value() + "\n"))
            << ((not mi.encoding.has_value()) ? "" : ("  encoding: " + mi.encoding.value() + "\n"))
@@ -99,7 +110,15 @@ public:
     }
 
 
-    static metainfo parse(std::unique_ptr<BNode> root) {
+    static string info_hash(const std::shared_ptr<BNode>& root) {
+        const auto& root_dict = dynamic_cast<BDictionary*>(root.get())->dict;
+        if (0 == root_dict.count(BString("info"))) throw std::domain_error("No 'info' field.");
+        auto info = dynamic_cast<BDictionary*>(root.get());
+        return sha1sum(info->encode());
+    }
+
+
+    static metainfo parse(const std::shared_ptr<BNode>& root) {
         const auto& dict = (dynamic_cast<BDictionary const *>(root.get()))->dict;
 
         uint64_t piece_length;
@@ -108,7 +127,7 @@ public:
         string name;
         vector<file_description> files;
         string announce;
-        optional<vector<string>> announce_list;
+        optional<vector<vector<string>>> announce_list;
         optional<uint64_t> creation_date;
         optional<string> comment;
         optional<string> created_by;
@@ -139,11 +158,14 @@ public:
         if (0 == dict.count(BString("announce"))) throw std::domain_error("No 'announce' field.");
         announce = dynamic_cast<BString*>(dict.at(BString("announce")).get())->value;
 
-        if (1 <= dict.count(BString("announce list"))) {
-            const auto& got_list = dynamic_cast<BList*>(dict.at(BString("announce list")).get())->elements;
-            announce_list = { vector<string>() };
-            for (const auto& el: got_list)
-                announce_list.value().push_back(dynamic_cast<BString*>(el.get())->value);
+        if (1 <= dict.count(BString("announce-list"))) {
+            const auto& got_list = dynamic_cast<BList*>(dict.at(BString("announce-list")).get())->elements;
+            announce_list = { vector<vector<string>>() };
+            for (const auto& inner_list: got_list) {
+                announce_list.value().emplace_back();
+                for (const auto& str: dynamic_cast<BList*>(inner_list.get())->elements)
+                    announce_list.value().back().push_back( dynamic_cast<BString*>(str.get())->value );
+            }
         }
 
         if (1 == dict.count(BString("creation date")))
