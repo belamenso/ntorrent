@@ -5,9 +5,11 @@
 #include "bencoding.h"
 #include "url_encoding.h"
 #include "metainfo.h"
+#include "sha1.h"
 
 int main() {
     using std::cout, std::endl;
+
     string name = "/home/julian/ntorrent/examples/tears-of-steel.torrent";
 
     std::ifstream example_file;
@@ -29,5 +31,6 @@ int main() {
     auto parsed = metainfo::parse(std::move(got.value().first));
     cout << parsed << endl;
 
-    return 0;
+    cout << sha1sum("The quick brown fox jumps over the lazy dog") << endl;
+    cout << sha1sum("The quick brown fox jumps over the lazy cog") << endl;
 }
