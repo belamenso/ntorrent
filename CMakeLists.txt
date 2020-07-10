@@ -3,4 +3,4 @@ project(ntorrent)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(ntorrent main.cpp bencoding.cpp bencoding.h metainfo.h url_encoding.h sha1.h)
+add_executable(ntorrent main.cpp bencoding.h metainfo.h url_encoding.h sha1.h tracker_response.h)

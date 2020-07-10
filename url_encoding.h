@@ -66,4 +66,17 @@ optional<string> url_decode(const string& encoded) {
     return { decoded.str() };
 }
 
+
+string url_encode_hash(string hex_hash) {
+    if (hex_hash.size() % 2) throw std::domain_error("Hex hash needs to be of even length.");
+    for (char c: hex_hash) if (not is_hex_char(c)) throw std::domain_error("Hex hash must be comprised of hex chars.");
+
+    string ret;
+    for (unsigned i = 0; i < hex_hash.size(); i += 2)
+        ret += string("%") + hex_hash[i] + hex_hash[i+1];
+
+    return ret;
+}
+
+
 #endif //NTORRENT_URL_ENCODING_H

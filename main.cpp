@@ -11,7 +11,7 @@
 int main() {
     using std::cout, std::endl;
 
-    string name = "/home/julian/ntorrent/examples/tears-of-steel.torrent";
+    string name = "/home/julian/ntorrent/examples/ubuntu.torrent";
 
     std::ifstream example_file;
     example_file.open(name.c_str(), std::ios::binary);
@@ -35,4 +35,5 @@ int main() {
 
     assert( metainfo::info_hash(buffer.str(), shared) == metainfo::info_hash(shared) );
     cout << metainfo::info_hash(shared) << endl;
+    cout << url_encode_hash(metainfo::info_hash(shared)) << endl;
 }
