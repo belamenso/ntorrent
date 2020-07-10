@@ -9,7 +9,7 @@
 #include <ostream>
 #include <cassert>
 #include <optional>
-using std::string, std::optional;
+using std::string, std::optional, std::vector;
 
 #include "url_encoding.h"
 
@@ -108,5 +108,32 @@ struct tracker_request {
     }
 
 };
+
+optional<string> scrape_url(const string& announce, vector<string> info_hashes_urlencoded) {
+    const auto announce_len = string("announce").length();
+
+    int64_t i = announce.size() - 1;
+    for (; i >= 0; i--)
+        if (announce[i] == '/') break;
+    if (i == -1) return {};
+    i++; // eat the '/'
+    if (announce.size() - i < announce_len) return {};
+    if (string("announce") != announce.substr(i, announce_len)) return {};
+
+    string ret = announce.substr(0, i) + "scrape" + announce.substr(i + announce_len, announce.size() - i);
+
+    if (info_hashes_urlencoded.size()) {
+        ret += "?";
+        for (const string& ih: info_hashes_urlencoded)
+            ret += "info_hash=" + ih + "&";
+        ret.pop_back();
+    }
+
+    return { ret };
+}
+
+optional<string> scrape_url(const string& announce) {
+    return scrape_url(announce, {});
+}
 
 #endif //NTORRENT_TRACKER_REQUEST_H
