@@ -42,7 +42,7 @@ struct file_description {
         if (fd.md5sum.has_value()) {
             os << ", md5sum: " << fd.md5sum.value() << "]";
         } else {
-            os << "]";c
+            os << "]";
         }
         return os;
     }
