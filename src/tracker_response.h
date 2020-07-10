@@ -189,43 +189,40 @@ struct tracker_scrape {
     }
 
     static optional<tracker_scrape> parse(const std::shared_ptr<bnode>& root) {
-        const auto& dict = dynamic_cast<bdictionary*>(root.get())->dict;
+        const auto& dict = *dynamic_cast<bdictionary*>(root.get());
 
-        if (1 == dict.count(bstring("failure reason"))) {
-            string failure_reason = dynamic_cast<bstring*>(dict.at(bstring("failure reason")).get())->value;
-            return { tracker_scrape({failure_reason}, {}, {}) };
-        }
+        if (dict.has_typed("failure reason", bstring_t))
+            return { tracker_scrape({dict.get_string("failure reason").value()}, {}, {}) };
 
         map<string, scrape_file> files;
         optional<uint64_t> flag_min_request_interval;
 
-        if (1 == dict.count(bstring("flags"))) {
-            const auto& flags_dict = dynamic_cast<bdictionary*>(dict.at(bstring("flags")).get())->dict;
-            if (1 == flags_dict.count(bstring("min_request_interval"))) {
-                flag_min_request_interval =
-                        { dynamic_cast<bint*>(flags_dict.at(bstring("min_request_interval")).get())->value };
+        if (dict.has_typed("flags", bdictionary_t)) {
+            const auto& flags_dict = *dynamic_cast<bdictionary*>(dict.dict.at(bstring("flags")).get());
+            if (flags_dict.has_typed("min_request_interval", bint_t)) {
+                flag_min_request_interval = { flags_dict.get_int("min_request_interval") };
             }
         }
 
-        if (0 == dict.count(bstring("files"))) return {};
-        const auto& files_dict = dynamic_cast<bdictionary*>(dict.at(bstring("files")).get())->dict;
-        for (const auto& [ih, fd]: files_dict) {
+        if (not dict.has_typed("files", bdictionary_t)) return {};
+        const auto& files_dict = *dynamic_cast<bdictionary*>(dict.dict.at(bstring("files")).get());
+        for (const auto& [ih, fd]: files_dict.dict) {
             uint64_t complete, downloaded, incomplete;
             optional<string> name;
 
-            const auto& file_dict = dynamic_cast<bdictionary*>(fd.get())->dict;
+            const auto& file_dict = *dynamic_cast<bdictionary*>(fd.get());
 
-            if (0 == file_dict.count(bstring("complete"))) return {};
-            complete = dynamic_cast<bint*>(file_dict.at(bstring("complete")).get())->value;
+            if (not file_dict.has_typed("complete", bint_t)) return {};
+            complete = file_dict.get_int("complete").value();
 
-            if (0 == file_dict.count(bstring("downloaded"))) return {};
-            downloaded = dynamic_cast<bint*>(file_dict.at(bstring("downloaded")).get())->value;
+            if (not file_dict.has_typed("downloaded", bint_t)) return {};
+            downloaded = file_dict.get_int("downloaded").value();
 
-            if (0 == file_dict.count(bstring("incomplete"))) return {};
-            incomplete = dynamic_cast<bint*>(file_dict.at(bstring("incomplete")).get())->value;
+            if (not file_dict.has_typed("incomplete", bint_t)) return {};
+            incomplete = file_dict.get_int("incomplete").value();
 
-            if (1 == file_dict.count(bstring("name")))
-                name = { dynamic_cast<bstring*>(file_dict.at(bstring("name")).get())->value };
+            if (file_dict.has_typed("name", bstring_t))
+                name = file_dict.get_string("name").value();
 
             if (0 != files.count(ih.value)) return {};
             files.insert({ih.value, std::move(scrape_file( complete, downloaded, incomplete, name ))});

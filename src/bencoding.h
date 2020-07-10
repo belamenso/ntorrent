@@ -141,11 +141,6 @@ public:
 
 
 class bdictionary: public bnode {
-private:
-    [[nodiscard]] bool typed_field_exists(const bstring& key, bnode_type type) const {
-        return 1 <= dict.count(key) and type == dict.at(key)->type();
-    }
-
 protected:
     void present(std::ostream& os) const override {
         if (dict.empty()) {
@@ -169,15 +164,20 @@ public:
         return 1 <= dict.count(bstring(key));
     }
 
+    [[nodiscard]] bool has_typed(const std::string& key, bnode_type type) const {
+        const auto k = bstring(key);
+        return 1 <= dict.count(k) and type == dict.at(k)->type();
+    }
+
     [[nodiscard]] std::optional<int64_t> get_int(const std::string& key) const {
         auto k = bstring(key);
-        if (not typed_field_exists(k, bint_t)) return {};
+        if (not has_typed(key, bint_t)) return {};
         return { dynamic_cast<bint*>(dict.at(k).get())->value };
     }
 
     [[nodiscard]] std::optional<std::string> get_string(const std::string& key) const {
         auto k = bstring(key);
-        if (not typed_field_exists(k, bstring_t)) return {};
+        if (not has_typed(key, bstring_t)) return {};
         return { dynamic_cast<bstring*>(dict.at(k).get())->value };
     }
 
