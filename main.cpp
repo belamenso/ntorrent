@@ -5,13 +5,14 @@
 
 #include "bencoding.h"
 #include "url_encoding.h"
+#include "tracker_response.h"
 #include "metainfo.h"
 #include "sha1.h"
 
 int main() {
     using std::cout, std::endl;
 
-    string name = "/home/julian/ntorrent/examples/ubuntu.torrent";
+    string name = "/home/julian/ntorrent/examples/response-compact";
 
     std::ifstream example_file;
     example_file.open(name.c_str(), std::ios::binary);
@@ -20,6 +21,7 @@ int main() {
     buffer << example_file.rdbuf();
 
     auto got = BNode::decode(buffer.str());
+    assert(got.has_value());
 
     cout << *got.value().first << endl;
 
@@ -30,10 +32,16 @@ int main() {
     cout << endl;
 
     std::shared_ptr<BNode> shared = std::move(got.value().first);
+    auto parsed = tracker_response::parse(shared);
+    assert(parsed.has_value());
+    assert(std::holds_alternative<tracker_response>(parsed.value()));
+    cout << std::get<tracker_response>(parsed.value()) << endl;
+
+    /*std::shared_ptr<BNode> shared = std::move(got.value().first);
     auto parsed = metainfo::parse(shared);
     cout << parsed << endl;
 
     assert( metainfo::info_hash(buffer.str(), shared) == metainfo::info_hash(shared) );
     cout << metainfo::info_hash(shared) << endl;
-    cout << url_encode_hash(metainfo::info_hash(shared)) << endl;
+    cout << url_encode_hash(metainfo::info_hash(shared)) << endl;*/
 }
