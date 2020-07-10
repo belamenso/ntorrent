@@ -5,16 +5,18 @@
 #ifndef NTORRENT_TRACKER_RESPONSE_H
 #define NTORRENT_TRACKER_RESPONSE_H
 
+#include <map>
 #include <string>
 #include <vector>
 #include <memory>
 #include <ostream>
 #include <variant>
 #include <optional>
-using std::string, std::optional, std::vector;
+using std::string, std::optional, std::vector, std::map;
 #include <arpa/inet.h>
 
 #include "bencoding.h"
+#include "encoding.h"
 
 
 struct peer {
@@ -139,6 +141,98 @@ struct tracker_response {
         return { tracker_response( warning_message, interval, min_interval, tracker_id, complete, incomplete, peers ) };
     };
 
+};
+
+
+struct scrape_file {
+    const uint64_t complete, downloaded, incomplete;
+    const optional<string> name;
+
+    scrape_file(scrape_file const &f) = default;
+
+    scrape_file(uint64_t complete, uint64_t downloaded, uint64_t incomplete, optional<string> name)
+    : complete(complete), downloaded(downloaded), incomplete(incomplete), name(std::move(name)) {}
+
+    friend std::ostream& operator << (std::ostream& os, const scrape_file& f) {
+        os << "scrape_file["
+           << (f.name.has_value() ? "name: " + f.name.value() + ", " : "")
+           << "complete: " << f.complete << ", downloaded: " << f.downloaded << ", incomplate: " << f.incomplete
+           << "]";
+        return os;
+    }
+
+};
+
+
+struct tracker_scrape {
+    const optional<string> failure_reason; // if this is set, all the other fields are ignored
+    const map<string, scrape_file> files;
+    const optional<uint64_t> flag_min_request_interval;
+
+    tracker_scrape(optional<string> failure_reason, map<string, scrape_file> files, optional<uint64_t> flag_min_request_interval)
+    : failure_reason(std::move(failure_reason)), files(std::move(files)), flag_min_request_interval(flag_min_request_interval) {}
+
+    friend std::ostream& operator << (std::ostream& os, const tracker_scrape& t) {
+        os << "scrape[\n";
+        if (t.failure_reason.has_value()) {
+            os << "  failure reason: " << t.failure_reason.value() << "\n]";
+            return os;
+        }
+        os << (t.flag_min_request_interval.has_value() ?
+                "  flag min_request_interval: " + std::to_string(t.flag_min_request_interval.value()) + "\n" : "")
+           << "  files: [\n";
+        for (const auto& [k, v]: t.files)
+            os << "    " << bin_to_hex_string(reinterpret_cast<const uint8_t *>(k.c_str()), k.length()) << ": \n"
+               << "      " << v << "\n";
+        os << "  ]\n]";
+        return os;
+    }
+
+    static optional<tracker_scrape> parse(const std::shared_ptr<BNode>& root) {
+        const auto& dict = dynamic_cast<BDictionary*>(root.get())->dict;
+
+        if (1 == dict.count(BString("failure reason"))) {
+            string failure_reason = dynamic_cast<BString*>(dict.at(BString("failure reason")).get())->value;
+            return { tracker_scrape({failure_reason}, {}, {}) };
+        }
+
+        map<string, scrape_file> files;
+        optional<uint64_t> flag_min_request_interval;
+
+        if (1 == dict.count(BString("flags"))) {
+            const auto& flags_dict = dynamic_cast<BDictionary*>(dict.at(BString("flags")).get())->dict;
+            if (1 == flags_dict.count(BString("min_request_interval"))) {
+                flag_min_request_interval =
+                        { dynamic_cast<BInt*>(flags_dict.at(BString("min_request_interval")).get())->value };
+            }
+        }
+
+        if (0 == dict.count(BString("files"))) return {};
+        const auto& files_dict = dynamic_cast<BDictionary*>(dict.at(BString("files")).get())->dict;
+        for (const auto& [ih, fd]: files_dict) {
+            uint64_t complete, downloaded, incomplete;
+            optional<string> name;
+
+            const auto& file_dict = dynamic_cast<BDictionary*>(fd.get())->dict;
+
+            if (0 == file_dict.count(BString("complete"))) return {};
+            complete = dynamic_cast<BInt*>(file_dict.at(BString("complete")).get())->value;
+
+            if (0 == file_dict.count(BString("downloaded"))) return {};
+            downloaded = dynamic_cast<BInt*>(file_dict.at(BString("downloaded")).get())->value;
+
+            if (0 == file_dict.count(BString("incomplete"))) return {};
+            incomplete = dynamic_cast<BInt*>(file_dict.at(BString("incomplete")).get())->value;
+
+            if (1 == file_dict.count(BString("name")))
+                name = { dynamic_cast<BString*>(file_dict.at(BString("name")).get())->value };
+
+            if (0 != files.count(ih.value)) return {};
+            files.insert({ih.value, std::move(scrape_file( complete, downloaded, incomplete, name ))});
+        }
+
+        return {{ optional<string>(), files, flag_min_request_interval }};
+    }
 };
 
 
