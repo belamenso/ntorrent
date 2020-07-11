@@ -31,8 +31,8 @@ std::ostream& operator << (std::ostream& os, const event_t e) {
 struct tracker_request {
     const string announce;
 
-    const string info_hash_urlencoded;
-    const string peer_id_urlencoded;
+    const string info_hash;
+    const string peer_id;
     const uint16_t port;
     const uint64_t uploaded, downloaded, left;
     optional<bool> compact; // XXX optional since some trackers behave differently in "commpact=0" vs no compact at all
@@ -40,13 +40,16 @@ struct tracker_request {
     optional<event_t> event;
     optional<string> ip;
     optional<uint64_t> numwant;
-    optional<string> key_urlencoded;
+    optional<uint32_t> key;
     optional<string> trackerid_urlencoded;
 
-    tracker_request(string info_hash_urlencoded, string peer_id_urlencoded, uint16_t port,
+    tracker_request(string info_hash, string peer_id, uint16_t port,
             uint64_t uploaded, uint64_t downloaded, uint64_t left)
-    : info_hash_urlencoded(std::move(info_hash_urlencoded)), peer_id_urlencoded(std::move(peer_id_urlencoded)),
-    port(port), uploaded(uploaded), downloaded(downloaded), left(left) {}
+    : info_hash(std::move(info_hash)), peer_id(std::move(peer_id)),
+      port(port), uploaded(uploaded), downloaded(downloaded), left(left) {
+        if (peer_id.size() != 20) throw std::domain_error("peer_id should be 20 bytes long.");
+        if (info_hash.size() != 20) throw std::domain_error("info_hash should be 20 bytes long.");
+    }
 
     static tracker_request build(string info_hash_urlencoded, string peer_id_urlencoded, uint16_t port,
                                  uint64_t uploaded, uint64_t downloaded, uint64_t left) {
@@ -79,8 +82,8 @@ struct tracker_request {
         return *this;
     }
 
-    tracker_request set_key_urlencoded(optional<string> key_urlencoded_) {
-        key_urlencoded = std::move(key_urlencoded_);
+    tracker_request set_key(optional<uint32_t> key_) {
+        key = key_;
         return *this;
     }
 
@@ -89,11 +92,11 @@ struct tracker_request {
         return *this;
     }
 
-    [[nodiscard]] string request() const {
+    [[nodiscard]] string http_request_url() const {
         std::stringstream ss;
         ss << announce << "?"
-           << "info_hash=" << info_hash_urlencoded
-           << "&peer_id=" << peer_id_urlencoded
+           << "info_hash=" << url_encode(info_hash)
+           << "&peer_id=" << url_encode(peer_id)
            << "&port=" << port
            << "&uploaded" << uploaded << "&downloaded" << downloaded << "&left" << left;
         if (compact.has_value()) ss << "&compact=" << (compact.value() ? "1" : "0");
@@ -101,7 +104,7 @@ struct tracker_request {
         if (event.has_value()) ss << "&event=" << event.value();
         if (ip.has_value()) ss << "&ip=" << ip.value();
         if (numwant.has_value()) ss << "&numwant=" << numwant.value();
-        if (key_urlencoded.has_value()) ss << "&key=" << key_urlencoded.value();
+        if (key.has_value()) ss << "&key=" << key.value();
         if (trackerid_urlencoded.has_value()) ss << "&trackerid=" << trackerid_urlencoded.value();
 
         return ss.str();

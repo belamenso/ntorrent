@@ -11,10 +11,39 @@ using std::string;
 #include <optional>
 using std::optional;
 
+namespace {
+    inline bool is_url_acceptable(char c) {
+        return ('a' <= c and c <= 'z') or ('A' <= c and c <= 'Z') or ('0' <= c and c <= '9')
+               or c == '.' or c == '-' or c == '_' or c == '~';
+    }
 
-static inline bool is_url_acceptable(char c) {
-    return ('a' <= c and c <= 'z') or ('A' <= c and c <= 'Z') or ('0' <= c and c <= '9')
-           or c == '.' or c == '-' or c == '_' or c == '~';
+    inline bool is_hex_char(char c) {
+        return ('0' <= c and c <= '9') or ('a' <= c and c <= 'f') or ('A' <= c and c <= 'F');
+    }
+
+    inline char hex_to_char(char c1, char c2) {
+        std::stringstream ss;
+        uint32_t ret = 0;
+        ss << c1 << c2;
+        ss >> std::hex >> ret;
+        return static_cast<char>(ret);
+    }
+}
+
+
+bool is_url_encoded(const string& data) {
+    unsigned i = 0;
+    while (i < data.size()) {
+        if (data[i] == '%') {
+            if (data.size() - i < 3) return false;
+            if (not is_hex_char(data[i+1]) or not is_hex_char(data[i+2])) return false;
+            i += 3;
+        } else {
+            if (not is_url_acceptable(data[i])) return false;
+            i++;
+        }
+    }
+    return true;
 }
 
 
@@ -31,19 +60,6 @@ string url_encode(const string& decoded) {
     }
 
     return encoded.str();
-}
-
-static inline char hex_to_char(char c1, char c2) {
-    std::stringstream ss;
-    uint32_t ret = 0;
-    ss << c1 << c2;
-    ss >> std::hex >> ret;
-    return static_cast<char>(ret);
-}
-
-
-static inline bool is_hex_char(char c) {
-    return ('0' <= c and c <= '9') or ('a' <= c and c <= 'f') or ('A' <= c and c <= 'F');
 }
 
 
