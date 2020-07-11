@@ -61,5 +61,5 @@ int main() {
     cout << url_encode_hash(metainfo::info_hash(shared)) << endl;
 
     auto got_data = http_request( scrape_url( parsed.announce ).value() );
-    cout << got_data << endl;
+    cout << got_data.value() << endl;
 }

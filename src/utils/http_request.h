@@ -24,13 +24,14 @@ namespace {
 }
 
 
-string http_request(const string& url) {
+optional<string> http_request(const string& url) {
     if (not (url.substr(0, string("http://").length()) == "http://"
                 or url.substr(0, string("https://").length()) == "https://"))
         throw std::domain_error("Incorrect protocol. Only HTTP and HTTPS are supported");
 
     CURL *curl;
     CURLcode res;
+    bool all_ok = true;
     string ret;
 
     curl_global_init(CURL_GLOBAL_DEFAULT);
@@ -45,12 +46,13 @@ string http_request(const string& url) {
         res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
             std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
+            all_ok = false;
         }
     }
     curl_easy_cleanup(curl);
     curl_global_cleanup();
 
-    return ret;
+    return all_ok? optional<string>(ret) : optional<string>();
 }
 
 #endif //NTORRENT_HTTP_REQUEST_H
