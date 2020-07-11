@@ -8,11 +8,13 @@
 #include "src/tracker_response.h"
 #include "src/metainfo.h"
 #include "src/sha1.h"
+#include "src/http_request.h"
+#include "src/tracker_request.h"
 
 int main() {
     using std::cout, std::endl;
 
-    string name = "/home/julian/ntorrent/examples/scrape/ubuntu-scrape";
+    string name = "/home/julian/ntorrent/examples/torrent/ubuntu.torrent";
 
     std::ifstream example_file;
     example_file.open(name.c_str(), std::ios::binary);
@@ -35,21 +37,20 @@ int main() {
     cout << endl;
 
     /// scrape
-    std::shared_ptr<bnode> shared = std::move(got.value().first);
+    /*std::shared_ptr<bnode> shared = std::move(got.value().first);
     auto parsed = tracker_scrape::parse(shared);
     assert(parsed.has_value());
-    cout << parsed.value() << endl;
+    cout << parsed.value() << endl;*/
 
-    /*
+
     /// tracker responses
-    std::shared_ptr<bnode> shared = std::move(got.value().first);
+    /*std::shared_ptr<bnode> shared = std::move(got.value().first);
     auto parsed = tracker_response::parse(shared);
     assert(parsed.has_value());
     assert(std::holds_alternative<tracker_response>(parsed.value()));
-    cout << std::get<tracker_response>(parsed.value()) << endl;
-    */
+    cout << std::get<tracker_response>(parsed.value()) << endl;*/
 
-    /*
+
     /// torrent files
     std::shared_ptr<bnode> shared = std::move(got.value().first);
     auto parsed = metainfo::parse(shared);
@@ -58,5 +59,7 @@ int main() {
     assert( metainfo::info_hash(buffer.str(), shared) == metainfo::info_hash(shared) );
     cout << metainfo::info_hash(shared) << endl;
     cout << url_encode_hash(metainfo::info_hash(shared)) << endl;
-    */
+
+    auto got_data = http_request( scrape_url( parsed.announce ).value() );
+    cout << got_data << endl;
 }
