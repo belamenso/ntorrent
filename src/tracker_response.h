@@ -126,13 +126,8 @@ struct tracker_response {
             if (peers_str.size() % 6) return {};
 
             for (unsigned i = 0; i < peers_str.size(); i += 6) {
-                string ip;
-                for (unsigned j = 0; j < 4; j++) ip += std::to_string(static_cast<uint8_t>(peers_str[i+j])) + ".";
-                ip.pop_back();
-
-                uint64_t port = static_cast<uint8_t>(peers_str[i+4]);
-                port = (port <<= 8u) + static_cast<uint8_t>(peers_str[i+5]);
-
+                const string ip = bin_ip_to_string_ip(reinterpret_cast<const uint8_t*>(peers_str.c_str() + i));
+                const uint64_t port = bin_port_to_uint16(reinterpret_cast<const uint8_t*>(peers_str.c_str() + i + 4));
                 peers.emplace_back( optional<string>(), ip, port );
             }
         } else {
