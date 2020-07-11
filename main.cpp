@@ -7,8 +7,8 @@
 #include "src/url_encoding.h"
 #include "src/tracker_response.h"
 #include "src/metainfo.h"
-#include "src/sha1.h"
-#include "src/http_request.h"
+#include "src/utils/sha1.h"
+#include "src/utils/http_request.h"
 #include "src/tracker_request.h"
 
 int main() {

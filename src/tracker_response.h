@@ -16,7 +16,7 @@ using std::string, std::optional, std::vector, std::map;
 #include <arpa/inet.h>
 
 #include "bencoding.h"
-#include "encoding.h"
+#include "utils/encoding.h"
 
 
 struct peer {

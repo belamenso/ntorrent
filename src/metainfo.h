@@ -18,7 +18,7 @@
 using std::cout, std::endl;
 
 #include "bencoding.h"
-#include "sha1.h"
+#include "utils/sha1.h"
 
 using std::vector, std::string, std::optional;
 

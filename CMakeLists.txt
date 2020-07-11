@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 link_libraries(curl)
 
 add_executable(ntorrent main.cpp
-                src/bencoding.h src/metainfo.h src/url_encoding.h src/sha1.h
-                src/tracker_response.h src/tracker_request.h src/encoding.h src/http_request.h)
+                src/bencoding.h src/metainfo.h src/url_encoding.h src/utils/sha1.h
+                src/tracker_response.h src/tracker_request.h src/utils/encoding.h src/utils/http_request.h)
 
 add_subdirectory(tests)
