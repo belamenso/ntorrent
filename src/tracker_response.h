@@ -104,25 +104,24 @@ struct tracker_response {
             blist* peers_list_ptr = dynamic_cast<blist*>(dict.dict.at(bstring("peers")).get());
             assert (peers_list_ptr != nullptr);
             for (const auto& peer: peers_list_ptr->elements) {
-                const auto& peer_dict = dynamic_cast<bdictionary*>(peer.get())->dict;
+                const auto& peer_dict = *dynamic_cast<bdictionary*>(peer.get());
                 string peer_id, ip;
                 uint64_t port;
 
-                if (0 == peer_dict.count(bstring("peer id"))) return {};
-                peer_id = dynamic_cast<bstring*>(peer_dict.at(bstring("peer id")).get())->value;
+                if (not peer_dict.has("peer id", bstring_t)) return {};
+                peer_id = peer_dict.get_string("peer id").value();
 
-                if (0 == peer_dict.count(bstring("ip"))) return {};
-                ip = dynamic_cast<bstring*>(peer_dict.at(bstring("ip")).get())->value;
+                if (not peer_dict.has("ip", bstring_t)) return {};
+                ip = peer_dict.get_string("ip").value();
 
-                if (0 == peer_dict.count(bstring("port"))) return {};
-                port = dynamic_cast<bint*>(peer_dict.at(bstring("port")).get())->value;
+                if (not peer_dict.has("port", bint_t)) return {};
+                port = peer_dict.get_int("port").value();
 
                 peers.emplace_back( optional<string>(peer_id), ip, port );
             }
         } else if (dict.has("peers", bstring_t)) {
             bstring* peers_str_ptr = dynamic_cast<bstring*>(dict.dict.at(bstring("peers")).get());
             assert(peers_str_ptr != nullptr);
-            if (peers_str_ptr == nullptr) return {};
             const string& peers_str = peers_str_ptr->value;
             if (peers_str.size() % 6) return {};
 
