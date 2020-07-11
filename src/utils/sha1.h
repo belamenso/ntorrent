@@ -199,6 +199,10 @@ public:
         return *this;
     }
 
+    std::string get_raw() {
+        return std::string(reinterpret_cast<char*>(state), 20);
+    }
+
     std::string get(bool lower_case = true) {
         std::string ret;
         const char *alphabet = lower_case ? "0123456789abcdef" : "0123456789ABCDEF";
@@ -216,6 +220,12 @@ std::string sha1sum(const std::string& data, bool lower_case=true) {
     sha1 s(data);
     s.finalize();
     return s.get(lower_case);
+}
+
+std::string sha1sum_raw(const std::string& data) {
+    sha1 s(data);
+    s.finalize();
+    return s.get_raw();
 }
 
 #endif //NTORRENT_SHA1_H

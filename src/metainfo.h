@@ -111,21 +111,23 @@ public:
     }
 
 
-    static string info_hash(const std::shared_ptr<bnode>& root) {
+    static string info_hash(const std::shared_ptr<bnode>& root, bool raw = false) {
         const auto& root_dict = dynamic_cast<bdictionary*>(root.get())->dict;
         if (0 == root_dict.count(bstring("info"))) throw std::domain_error("No 'info' field.");
         auto info = dynamic_cast<bdictionary*>(root_dict.at(bstring("info")).get());
-        return sha1sum(info->encode());
+        return raw ? sha1sum_raw(info->encode()) : sha1sum(info->encode());
     }
 
 
-    static string info_hash(const string& data, const std::shared_ptr<bnode>& root) {
+    static string info_hash(const string& data, const std::shared_ptr<bnode>& root, bool raw = false) {
         const auto& root_dict = dynamic_cast<bdictionary*>(root.get())->dict;
         if (0 == root_dict.count(bstring("info"))) throw std::domain_error("No 'info' field.");
         auto info = dynamic_cast<bdictionary*>(root_dict.at(bstring("info")).get());
         if (data.size() <= info->beg or data.size()+1 <= info->end)
             throw std::domain_error("Incorrect original slice encoding in the 'info' dictionary.");
-        return sha1sum(data.substr(info->beg, info->end - info->beg));
+        return raw ?
+               sha1sum_raw(data.substr(info->beg, info->end - info->beg))
+               : sha1sum(data.substr(info->beg, info->end - info->beg));
     }
 
 

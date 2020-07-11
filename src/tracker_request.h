@@ -109,7 +109,7 @@ struct tracker_request {
 
 };
 
-optional<string> scrape_url(const string& announce, vector<string> info_hashes_urlencoded) {
+optional<string> scrape_url(const string& announce, const vector<string>& info_hashes_urlencoded) {
     const auto announce_len = string("announce").length();
 
     int64_t i = announce.size() - 1;
@@ -122,7 +122,7 @@ optional<string> scrape_url(const string& announce, vector<string> info_hashes_u
 
     string ret = announce.substr(0, i) + "scrape" + announce.substr(i + announce_len, announce.size() - i);
 
-    if (info_hashes_urlencoded.size()) {
+    if (not info_hashes_urlencoded.empty()) {
         ret += "?";
         for (const string& ih: info_hashes_urlencoded)
             ret += "info_hash=" + ih + "&";

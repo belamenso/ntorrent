@@ -2,8 +2,8 @@
 // Created by julian on 11.07.2020.
 //
 
-#ifndef NTORRENT_HTTP_REQUEST_H
-#define NTORRENT_HTTP_REQUEST_H
+#ifndef NTORRENT_NET_H
+#define NTORRENT_NET_H
 
 #include <string>
 #include <cassert>
@@ -55,4 +55,8 @@ optional<string> http_request(const string& url) {
     return all_ok? optional<string>(ret) : optional<string>();
 }
 
-#endif //NTORRENT_HTTP_REQUEST_H
+
+
+
+
+#endif //NTORRENT_NET_H
