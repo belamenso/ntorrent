@@ -157,7 +157,7 @@ struct scrape_file {
     friend std::ostream& operator << (std::ostream& os, const scrape_file& f) {
         os << "scrape_file["
            << (f.name.has_value() ? "name: " + f.name.value() + ", " : "")
-           << "complete: " << f.complete << ", downloaded: " << f.downloaded << ", incomplate: " << f.incomplete
+           << "complete: " << f.complete << ", downloaded: " << f.downloaded << ", incomplete: " << f.incomplete
            << "]";
         return os;
     }
