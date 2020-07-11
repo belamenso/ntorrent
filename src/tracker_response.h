@@ -58,7 +58,7 @@ struct tracker_response {
            << "  interval: " << r.interval << "\n"
            << (r.min_interval.has_value() ? "  min interval: " + std::to_string(r.min_interval.value()) + "\n" : "")
            << (r.tracker_id.has_value() ? "  tracker id: " + r.tracker_id.value() + "\n" : "")
-           << "  complate: " << r.complete << "\n"
+           << "  complete: " << r.complete << "\n"
            << "  incomplete: " << r.incomplete << "\n"
            << "  peers: [\n";
         for (const peer& p: r.peers) os << "    " << p << "\n";
@@ -69,10 +69,10 @@ struct tracker_response {
 
 
     static optional<std::variant<string, tracker_response>> parse(const std::shared_ptr<bnode>& root) {
-        const auto& dict = dynamic_cast<bdictionary*>(root.get())->dict;
+        const auto& dict = *dynamic_cast<bdictionary*>(root.get());
 
-        if (1 == dict.count(bstring("failure reason")))
-            return { dynamic_cast<bstring*>(dict.at(bstring("failure reason")).get())->value };
+        if (dict.has("failure reason", bstring_t))
+            return { dict.get_string("failure reason") };
 
         optional<string> warning_message;
         uint64_t interval;
@@ -82,28 +82,27 @@ struct tracker_response {
         uint64_t incomplete;
         vector<peer> peers;
 
-        if (1 == dict.count(bstring("warning message")))
-            warning_message = { dynamic_cast<bstring*>(dict.at(bstring("warning message")).get())->value };
+        if (dict.has("warning message", bstring_t))
+            warning_message = { dict.get_string("warning message").value() };
 
-        if (0 == dict.count(bstring("interval"))) return {};
-        interval = dynamic_cast<bint*>(dict.at(bstring("interval")).get())->value;
+        if (not dict.has("interval", bint_t)) return {};
+        interval = dict.get_int("interval").value();
 
-        if (1 == dict.count(bstring("min interval")))
-            min_interval = { dynamic_cast<bint*>(dict.at(bstring("min interval")).get())->value };
+        if (dict.has("min interval", bint_t))
+            min_interval = { dict.get_int("min interval").value() };
 
-        if (1 == dict.count(bstring("tracker id")))
-            tracker_id = { dynamic_cast<bstring*>(dict.at(bstring("tracker id")).get())->value };
+        if (dict.has("tracker id", bstring_t))
+            tracker_id = { dict.get_string("tracker id").value() };
 
-        if (0 == dict.count(bstring("complete"))) return {};
-        complete = dynamic_cast<bint*>(dict.at(bstring("complete")).get())->value;
+        if (not dict.has("complete", bint_t)) return {};
+        complete = dict.get_int("complete").value();
 
-        if (0 == dict.count(bstring("incomplete"))) return {};
-        incomplete = dynamic_cast<bint*>(dict.at(bstring("incomplete")).get())->value;
+        if (not dict.has("incomplete", bint_t)) return {};
+        incomplete = dict.get_int("incomplete").value();
 
-        if (0 == dict.count(bstring("peers"))) return {};
-
-        blist* peers_list_ptr = dynamic_cast<blist*>(dict.at(bstring("peers")).get());
-        if (peers_list_ptr != nullptr) { /// XXX dictionary model
+        if (dict.has("peers", blist_t)) {
+            blist* peers_list_ptr = dynamic_cast<blist*>(dict.dict.at(bstring("peers")).get());
+            assert (peers_list_ptr != nullptr);
             for (const auto& peer: peers_list_ptr->elements) {
                 const auto& peer_dict = dynamic_cast<bdictionary*>(peer.get())->dict;
                 string peer_id, ip;
@@ -120,8 +119,9 @@ struct tracker_response {
 
                 peers.emplace_back( optional<string>(peer_id), ip, port );
             }
-        } else { /// XXX binary model
-            bstring* peers_str_ptr = dynamic_cast<bstring*>(dict.at(bstring("peers")).get());
+        } else if (dict.has("peers", bstring_t)) {
+            bstring* peers_str_ptr = dynamic_cast<bstring*>(dict.dict.at(bstring("peers")).get());
+            assert(peers_str_ptr != nullptr);
             if (peers_str_ptr == nullptr) return {};
             const string& peers_str = peers_str_ptr->value;
             if (peers_str.size() % 6) return {};
@@ -136,6 +136,8 @@ struct tracker_response {
 
                 peers.emplace_back( optional<string>(), ip, port );
             }
+        } else {
+            return {};
         }
 
         return { tracker_response( warning_message, interval, min_interval, tracker_id, complete, incomplete, peers ) };
@@ -191,20 +193,20 @@ struct tracker_scrape {
     static optional<tracker_scrape> parse(const std::shared_ptr<bnode>& root) {
         const auto& dict = *dynamic_cast<bdictionary*>(root.get());
 
-        if (dict.has_typed("failure reason", bstring_t))
+        if (dict.has("failure reason", bstring_t))
             return { tracker_scrape({dict.get_string("failure reason").value()}, {}, {}) };
 
         map<string, scrape_file> files;
         optional<uint64_t> flag_min_request_interval;
 
-        if (dict.has_typed("flags", bdictionary_t)) {
+        if (dict.has("flags", bdictionary_t)) {
             const auto& flags_dict = *dynamic_cast<bdictionary*>(dict.dict.at(bstring("flags")).get());
-            if (flags_dict.has_typed("min_request_interval", bint_t)) {
+            if (flags_dict.has("min_request_interval", bint_t)) {
                 flag_min_request_interval = { flags_dict.get_int("min_request_interval").value() };
             }
         }
 
-        if (not dict.has_typed("files", bdictionary_t)) return {};
+        if (not dict.has("files", bdictionary_t)) return {};
         const auto& files_dict = *dynamic_cast<bdictionary*>(dict.dict.at(bstring("files")).get());
         for (const auto& [ih, fd]: files_dict.dict) {
             uint64_t complete, downloaded, incomplete;
@@ -212,16 +214,16 @@ struct tracker_scrape {
 
             const auto& file_dict = *dynamic_cast<bdictionary*>(fd.get());
 
-            if (not file_dict.has_typed("complete", bint_t)) return {};
+            if (not file_dict.has("complete", bint_t)) return {};
             complete = file_dict.get_int("complete").value();
 
-            if (not file_dict.has_typed("downloaded", bint_t)) return {};
+            if (not file_dict.has("downloaded", bint_t)) return {};
             downloaded = file_dict.get_int("downloaded").value();
 
-            if (not file_dict.has_typed("incomplete", bint_t)) return {};
+            if (not file_dict.has("incomplete", bint_t)) return {};
             incomplete = file_dict.get_int("incomplete").value();
 
-            if (file_dict.has_typed("name", bstring_t))
+            if (file_dict.has("name", bstring_t))
                 name = file_dict.get_string("name").value();
 
             if (0 != files.count(ih.value)) return {};

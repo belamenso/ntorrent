@@ -164,20 +164,20 @@ public:
         return 1 <= dict.count(bstring(key));
     }
 
-    [[nodiscard]] bool has_typed(const std::string& key, bnode_type type) const {
+    [[nodiscard]] bool has(const std::string& key, bnode_type type) const {
         const auto k = bstring(key);
         return 1 <= dict.count(k) and type == dict.at(k)->type();
     }
 
     [[nodiscard]] std::optional<int64_t> get_int(const std::string& key) const {
         auto k = bstring(key);
-        if (not has_typed(key, bint_t)) return {};
+        if (not has(key, bint_t)) return {};
         return { dynamic_cast<bint*>(dict.at(k).get())->value };
     }
 
     [[nodiscard]] std::optional<std::string> get_string(const std::string& key) const {
         auto k = bstring(key);
-        if (not has_typed(key, bstring_t)) return {};
+        if (not has(key, bstring_t)) return {};
         return { dynamic_cast<bstring*>(dict.at(k).get())->value };
     }
 
