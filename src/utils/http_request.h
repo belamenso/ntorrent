@@ -14,11 +14,13 @@
 using std::string;
 
 
-static size_t write_function(const char* data, size_t size, size_t actual_size, void *str_ptr) {
-    string& ret = *static_cast<string*>(str_ptr);
-    assert(size == 1);
-    ret += string(data, actual_size);
-    return actual_size;
+namespace {
+    size_t write_function(const char* data, size_t size, size_t actual_size, void *str_ptr) {
+        string& ret = *static_cast<string*>(str_ptr);
+        assert(size == 1);
+        ret += string(data, actual_size);
+        return actual_size;
+    }
 }
 
 
