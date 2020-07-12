@@ -40,7 +40,7 @@ struct file_description {
     : length(length), md5sum(std::move(md5sum)), path(std::move(path)) {}
 
     friend std::ostream& operator << (std::ostream& os, const file_description& fd) {
-        os << "File[len: " << fd.length << ", path: *";
+        os << "File[len: " << human_readable_size(fd.length) << ", path: *";
         for (const auto& el: fd.path) os << "/" << el;
         if (fd.md5sum.has_value()) {
             os << ", md5sum: " << fd.md5sum.value() << "]";
@@ -83,7 +83,7 @@ public:
         }
 
         os << "{\n"
-           << "  piece length: " << mi.piece_length << "\n"
+           << "  piece length: " << human_readable_size(mi.piece_length) << "\n"
            << "  pieces: " << (mi.pieces.size() >= 50 ?
                                 ("<<string of length " + std::to_string(mi.pieces.size()) + ">>") : mi.pieces) << "\n"
            << "  private: " << mi.private_ << "\n"

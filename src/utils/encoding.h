@@ -7,6 +7,7 @@
 
 #include <string>
 #include <random>
+#include <iomanip>
 
 using std::string;
 
@@ -83,6 +84,24 @@ uint32_t ip_string_to_ip(const string& ip) {
     if (err == 0) throw std::domain_error("IP address not in presentation format");
     if (err != 1) throw std::domain_error("Cannot convert IP address");
     return addr.s_addr;
+}
+
+string human_readable_size(uint64_t n) {
+    const string size_str[] { "B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB" };
+    uint64_t sizes[] { n, 0, 0, 0, 0, 0, 0 };
+    for (unsigned i = 1; i < 7; i++)
+        sizes[i] = sizes[i-1] >> 10u;
+    for (int i = 6; i >= 0; i--) {
+        if (sizes[i]) {
+            std::stringstream ss;
+            ss << std::fixed;
+            const double r = n/pow(1024,i);
+            ss << std::setprecision(round(r) == r ? 0 : 1) << r << ' ' << size_str[i];
+            if (i) ss << " (" << n << " B)";
+            return ss.str();
+        }
+    }
+    return "0 B";
 }
 
 #endif //NTORRENT_ENCODING_H
