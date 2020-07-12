@@ -33,19 +33,6 @@ namespace {
         return semicolon_pos;
     }
 
-    void write_all(const int fd, const char *data, unsigned n) {
-        // TODO BUG is this code incorrect (UDP)?
-        unsigned done = 0;
-        while (done < n) {
-            int got = write(fd, data + done, n);
-            if (got == -1) {
-                std::cerr << "??" << std::endl;
-                return;
-            }
-            done += got;
-        }
-    }
-
     enum protocol_action {
         act_connect = 0,
         act_announce = 1,
@@ -124,7 +111,7 @@ namespace {
         }
 
         const auto&[packet, tid] = udp_handshake();
-        write_all(sock_fd, packet.c_str(), packet.size());
+        write(sock_fd, packet.c_str(), packet.size());
 
         uint8_t reply_8[4 * 4]{};
         int read_bytes = read(sock_fd, reply_8, sizeof(reply_8));
@@ -163,7 +150,7 @@ optional<tracker_scrape> udp_scrape(const string& announce, const vector<string>
             packet[16 + 20*i + j] = static_cast<uint8_t>(info_hashes[i][j]);
     }
 
-    write_all(sock_fd, reinterpret_cast<const char *>(packet), sizeof(packet));
+    write(sock_fd, reinterpret_cast<const char *>(packet), sizeof(packet));
 
     uint8_t reply[8 + 12*info_hashes.size()];
 
@@ -224,7 +211,7 @@ optional<tracker_response> udp_announce(const tracker_request& req) {
     at<uint16_t>(packet, 16+40+24+16, 0) = htons(req.port);
     at<uint16_t>(packet, 16+40+24+16, 1) = 0; // TODO extensions not supported
 
-    write_all(sock_fd, reinterpret_cast<const char *>(packet), sizeof(packet));
+    write(sock_fd, reinterpret_cast<const char *>(packet), sizeof(packet));
 
     vector<peer> peers;
 
