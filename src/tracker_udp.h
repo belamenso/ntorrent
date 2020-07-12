@@ -128,6 +128,26 @@ namespace {
         auto connection_id = reply_64[1];
         return {{sock_fd, connection_id}};
     }
+
+    optional<unsigned> read_with_retry(int sock_fd, uint8_t *buffer, size_t len) {
+        const timeval timeout_options{15, 0};
+        if (0 != setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout_options, sizeof(timeout_options)))
+            return {};
+
+        int bytes_read;
+        for (unsigned retry_time = 1; retry_time <= 4; retry_time++) {
+            if (0 < (bytes_read = read(sock_fd, buffer, len)))
+                return { bytes_read };
+
+            if (bytes_read == -1 and (errno == EAGAIN or errno == EWOULDBLOCK)) {
+                std::cerr << "Socket timeout reached." << std::endl;
+                if (retry_time < 4) continue;
+                else std::cerr << "Giving up because of timeouts." << std::endl;
+            }
+            return {};
+        }
+        return {};
+    }
 }
 
 optional<tracker_scrape> udp_scrape(const string& announce, const vector<string>& info_hashes) {
@@ -153,12 +173,9 @@ optional<tracker_scrape> udp_scrape(const string& announce, const vector<string>
     write(sock_fd, reinterpret_cast<const char *>(packet), sizeof(packet));
 
     uint8_t reply[8 + 12*info_hashes.size()];
-
-    int bytes_read = read(sock_fd, reply, sizeof(reply));
-    if (bytes_read <= 0) {
-        std::cerr << "Managed to read only " << bytes_read << " bytes." << std::endl;
-        goto failure;
-    }
+    auto read_ret = read_with_retry(sock_fd, reply, sizeof(reply));
+    if (not read_ret.has_value()) return {};
+    const int bytes_read = read_ret.value();
 
     if (at<uint32_t>(reply, 0, 0) != htonl(act_scrape)) goto failure;
     if (at<uint32_t>(reply, 0, 1) != transaction_id) goto failure;
@@ -216,11 +233,9 @@ optional<tracker_response> udp_announce(const tracker_request& req) {
     vector<peer> peers;
 
     uint8_t reply[5*4+100*6];
-    int bytes_read = read(sock_fd, reply, sizeof(reply));
-    if (bytes_read <= 0) {
-        std::cerr << "Managed to read only " << bytes_read << " bytes." << std::endl;
-        goto failure;
-    }
+    auto read_ret = read_with_retry(sock_fd, reply, sizeof(reply));
+    if (not read_ret.has_value()) return {};
+    const int bytes_read = read_ret.value();
 
     if (bytes_read < 20) return {};
     if ((bytes_read - 20) % 6) return {};
