@@ -23,6 +23,10 @@ string bin_to_hex_string(uint8_t const * data, unsigned size, bool lower_case=tr
     return ret;
 }
 
+string bin_to_hex_string(const string& str, bool lower_case=true) {
+    return bin_to_hex_string(reinterpret_cast<const uint8_t *>(str.c_str()), str.size(), lower_case);
+}
+
 string bin_ip_to_string_ip(const uint8_t* data) {
     string ip;
     for (unsigned j = 0; j < 4; j++)
