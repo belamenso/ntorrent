@@ -38,16 +38,16 @@ struct peer {
 
 struct tracker_response {
     const optional<string> warning_message;
-    const uint64_t interval;
-    const optional<uint64_t> min_interval;
+    const uint32_t interval;
+    const optional<uint32_t> min_interval;
     const optional<string> tracker_id;
-    const uint64_t complete;
-    const uint64_t incomplete;
+    const uint32_t complete;
+    const uint32_t incomplete;
     const vector<peer> peers;
 
 
-    tracker_response(optional<string> warning_message, uint64_t interval, optional<uint64_t> min_interval,
-            optional<string> tracker_id, uint64_t complete, uint64_t incomplete, vector<peer> peers)
+    tracker_response(optional<string> warning_message, uint32_t interval, optional<uint32_t> min_interval,
+            optional<string> tracker_id, uint32_t complete, uint32_t incomplete, vector<peer> peers)
             : warning_message(std::move(warning_message)), interval(interval), min_interval(min_interval),
             tracker_id(std::move(tracker_id)), complete(complete), incomplete(incomplete), peers(std::move(peers)) {}
 
@@ -75,11 +75,11 @@ struct tracker_response {
             return { dict.get_string("failure reason") };
 
         optional<string> warning_message;
-        uint64_t interval;
-        optional<uint64_t> min_interval;
+        uint32_t interval;
+        optional<uint32_t> min_interval;
         optional<string> tracker_id;
-        uint64_t complete;
-        uint64_t incomplete;
+        uint32_t complete;
+        uint32_t incomplete;
         vector<peer> peers;
 
         if (dict.has("warning message", bstring_t))
@@ -106,7 +106,7 @@ struct tracker_response {
             for (const auto& peer: peers_list_ptr->elements) {
                 const auto& peer_dict = *dynamic_cast<bdictionary*>(peer.get());
                 string peer_id, ip_str;
-                uint64_t port;
+                uint16_t port;
 
                 if (not peer_dict.has("peer id", bstring_t)) return {};
                 peer_id = peer_dict.get_string("peer id").value();
@@ -141,12 +141,12 @@ struct tracker_response {
 
 
 struct scrape_file {
-    const uint64_t complete, downloaded, incomplete;
+    const uint32_t complete, downloaded, incomplete;
     const optional<string> name;
 
     scrape_file(scrape_file const &f) = default;
 
-    scrape_file(uint64_t complete, uint64_t downloaded, uint64_t incomplete, optional<string> name)
+    scrape_file(uint32_t complete, uint32_t downloaded, uint32_t incomplete, optional<string> name)
     : complete(complete), downloaded(downloaded), incomplete(incomplete), name(std::move(name)) {}
 
     friend std::ostream& operator << (std::ostream& os, const scrape_file& f) {
@@ -163,9 +163,9 @@ struct scrape_file {
 struct tracker_scrape {
     const optional<string> failure_reason; // if this is set, all the other fields are ignored
     const map<string, scrape_file> files;
-    const optional<uint64_t> flag_min_request_interval;
+    const optional<uint32_t> flag_min_request_interval;
 
-    tracker_scrape(optional<string> failure_reason, map<string, scrape_file> files, optional<uint64_t> flag_min_request_interval)
+    tracker_scrape(optional<string> failure_reason, map<string, scrape_file> files, optional<uint32_t> flag_min_request_interval)
     : failure_reason(std::move(failure_reason)), files(std::move(files)), flag_min_request_interval(flag_min_request_interval) {}
 
     friend std::ostream& operator << (std::ostream& os, const tracker_scrape& t) {
@@ -191,7 +191,7 @@ struct tracker_scrape {
             return { tracker_scrape({dict.get_string("failure reason").value()}, {}, {}) };
 
         map<string, scrape_file> files;
-        optional<uint64_t> flag_min_request_interval;
+        optional<uint32_t> flag_min_request_interval;
 
         if (dict.has("flags", bdictionary_t)) {
             const auto& flags_dict = *dynamic_cast<bdictionary*>(dict.dict.at(bstring("flags")).get());
@@ -203,7 +203,7 @@ struct tracker_scrape {
         if (not dict.has("files", bdictionary_t)) return {};
         const auto& files_dict = *dynamic_cast<bdictionary*>(dict.dict.at(bstring("files")).get());
         for (const auto& [ih, fd]: files_dict.dict) {
-            uint64_t complete, downloaded, incomplete;
+            uint32_t complete, downloaded, incomplete;
             optional<string> name;
 
             const auto& file_dict = *dynamic_cast<bdictionary*>(fd.get());
