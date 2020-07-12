@@ -11,11 +11,12 @@
 #include "src/utils/net.h"
 #include "src/tracker_request.h"
 #include "src/tracker_udp.h"
+#include "src/utils/fs.h"
 
 int main() {
     using std::cout, std::endl;
 
-    string name = "/home/julian/ntorrent/examples/torrent/sintel.torrent";
+    string name = "/home/julian/ntorrent/examples/torrent/wired-cd.torrent";
 
     std::ifstream example_file;
     example_file.open(name.c_str(), std::ios::binary);
@@ -57,21 +58,25 @@ int main() {
     auto parsed = metainfo::parse(shared);
     cout << parsed << endl;
 
-    // cout << udp_scrape(parsed.announce_list.value()[2][0], { metainfo::info_hash(shared, true) }).value() << endl;
-    cout << endl;
+    //auto p = participant(parsed, path("/home/julian/Desktop/tp/root"));
+
+    //get_memory_mapped_files(path("/home/julian/Desktop/tp/root"), parsed.files);
+
+    // cout << udp_scrape(parsed.announces[2][0], { metainfo::info_hash(shared, true) }).value() << endl;
+    /*cout << endl;
     cout <<
     udp_announce(tracker_request(
-            parsed.announce_list.value()[0][0],
+            parsed.announces[0][0],
             metainfo::info_hash(shared, true),
             string("01234567890123456789"), 50'723,
             0, 0, 1252).set_numwant(2)).value()
     << endl;
-    return 0;
+    return 0;*/
 
     assert( metainfo::info_hash(buffer.str(), shared) == metainfo::info_hash(shared) );
     cout << metainfo::info_hash(shared) << endl;
     cout << url_encode_hash(metainfo::info_hash(shared)) << endl;
 
-    auto got_data = http_request( scrape_url( parsed.announce ).value() );
-    cout << got_data.value() << endl;
+    //auto got_data = http_request( scrape_url( parsed.announce ).value() );
+    //cout << got_data.value() << endl;
 }

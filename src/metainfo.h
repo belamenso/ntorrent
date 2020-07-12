@@ -54,11 +54,11 @@ struct file_description {
 
 class metainfo {
 protected:
-    metainfo(uint64_t piece_length, string pieces, vector<file_description> files, bool private_, string announce,
-             optional<vector<vector<string>>> announce_list, optional<uint64_t> creation_date, optional<string> comment,
+    metainfo(uint64_t piece_length, string pieces, vector<file_description> files, bool private_,
+             vector<vector<string>> announces, optional<uint64_t> creation_date, optional<string> comment,
              optional<string> created_by, optional<string> encoding)
     : piece_length(piece_length), pieces(std::move(pieces)), files(std::move(files)), private_(private_),
-    announce(std::move(announce)), announce_list(std::move(announce_list)), creation_date(creation_date),
+    announces(std::move(announces)), creation_date(creation_date),
     comment(std::move(comment)), created_by(std::move(created_by)), encoding(std::move(encoding)) {}
 
 public:
@@ -66,8 +66,7 @@ public:
     string pieces;
     vector<file_description> files;
     bool private_ = false;
-    string announce;
-    optional<vector<vector<string>>> announce_list;
+    vector<vector<string>> announces;
     optional<uint64_t> creation_date;
     optional<string> comment;
     optional<string> created_by;
@@ -88,18 +87,15 @@ public:
            << "  pieces: " << (mi.pieces.size() >= 50 ?
                                 ("<<string of length " + std::to_string(mi.pieces.size()) + ">>") : mi.pieces) << "\n"
            << "  private: " << mi.private_ << "\n"
-           << "  announce: " << mi.announce << "\n";
-        if (mi.announce_list.has_value()) {
-            os << "  announce list: [\n";
-            for (const vector<string>& els: mi.announce_list.value()) {
+           << "  announces: [\n";
+            for (const vector<string>& els: mi.announces) {
                 os << "    [";
                 for (const string& el: els)
                     os << " " << el;
                 os << " ]\n";
             }
-            os << "  ]\n";
-        }
-        os << ((not mi.creation_date.has_value()) ? "" : ("  creation date: " + string(date) + "\n"))
+        os << "  ]\n"
+           << ((not mi.creation_date.has_value()) ? "" : ("  creation date: " + string(date) + "\n"))
            << ((not mi.comment.has_value()) ? "" : ("  comment: " + mi.comment.value() + "\n"))
            << ((not mi.created_by.has_value()) ? "" : ("  created by: " + mi.created_by.value() + "\n"))
            << ((not mi.encoding.has_value()) ? "" : ("  encoding: " + mi.encoding.value() + "\n"))
@@ -231,13 +227,16 @@ public:
             throw std::domain_error("Neither single not multiple files mode.");
         }
 
+        const vector<vector<string>> announces =
+            (announce_list.has_value() and not announce_list.value().empty() and not announce_list.value()[0].empty()) ?
+                announce_list.value() : vector<vector<string>>({vector<string>({announce})});
+
         return metainfo(
                 piece_length,
                 pieces,
                 files,
                 private_,
-                announce,
-                announce_list,
+                announces,
                 creation_date,
                 comment,
                 created_by,
