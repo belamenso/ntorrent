@@ -64,4 +64,25 @@ uint32_t str_to_u32(const string& str) {
     return *reinterpret_cast<uint32_t*>(bytes);
 }
 
+string seconds_to_readable_str(unsigned seconds) {
+    const unsigned h = seconds / 60 / 60,
+                   m = (seconds / 60) % 60,
+                   s = seconds % 60;
+    string ret;
+    if (h) ret += std::to_string(h) + "h ";
+    if (m) ret += std::to_string(m) + "m ";
+    if (s) ret += std::to_string(s) + "s ";
+    if (ret.empty()) return "0s";
+    ret.pop_back();
+    return ret;
+}
+
+uint32_t ip_string_to_ip(const string& ip) {
+    in_addr addr{};
+    int err = inet_pton(AF_INET, ip.c_str(), &addr);
+    if (err == 0) throw std::domain_error("IP address not in presentation format");
+    if (err != 1) throw std::domain_error("Cannot convert IP address");
+    return addr.s_addr;
+}
+
 #endif //NTORRENT_ENCODING_H

@@ -55,8 +55,8 @@ struct tracker_response {
     friend std::ostream& operator << (std::ostream& os, const tracker_response& r) {
         os << "tracker_response[\n"
            << (r.warning_message.has_value() ? "  warning message: " + r.warning_message.value() + "\n" : "")
-           << "  interval: " << r.interval << "\n"
-           << (r.min_interval.has_value() ? "  min interval: " + std::to_string(r.min_interval.value()) + "\n" : "")
+           << "  interval: " << seconds_to_readable_str(r.interval) << "\n"
+           << (r.min_interval.has_value() ? "  min interval: " + seconds_to_readable_str(r.min_interval.value()) + "\n" : "")
            << (r.tracker_id.has_value() ? "  tracker id: " + r.tracker_id.value() + "\n" : "")
            << "  complete: " << r.complete << "\n"
            << "  incomplete: " << r.incomplete << "\n"
@@ -117,7 +117,7 @@ struct tracker_response {
                 if (not peer_dict.has("port", bint_t)) return {};
                 port = peer_dict.get_int("port").value();
 
-                peers.emplace_back( optional<string>(peer_id), str_to_u32(ip_str), port );
+                peers.emplace_back( optional<string>(peer_id), ip_string_to_ip(ip_str), port );
             }
         } else if (dict.has("peers", bstring_t)) {
             bstring* peers_str_ptr = dynamic_cast<bstring*>(dict.dict.at(bstring("peers")).get());
