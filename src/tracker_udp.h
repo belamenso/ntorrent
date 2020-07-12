@@ -15,6 +15,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <bits/socket.h>
+#include <netinet/tcp.h>
+
 using std::string, std::optional;
 
 #include "utils/encoding.h"
@@ -32,6 +34,7 @@ namespace {
     }
 
     void write_all(const int fd, const char *data, unsigned n) {
+        // TODO BUG is this code incorrect (UDP)?
         unsigned done = 0;
         while (done < n) {
             int got = write(fd, data + done, n);
@@ -50,10 +53,13 @@ namespace {
         act_error = 3
     };
 
+    template <class T> T& at(void* data, size_t offset, size_t index=0) {
+        return reinterpret_cast<T*>( reinterpret_cast<uint8_t*>(data) + offset )[index];
+    }
+
     std::pair<string, uint32_t> udp_handshake() {
         uint32_t packet_32[4]{};
-        packet_32[0] = htonl(uint32_t(0x417));
-        packet_32[1] = htonl(uint32_t(0x27101980u));
+        at<uint64_t>(packet_32, 0, 0) = htonll(0x41727101980ull);
         packet_32[2] = htonl(act_connect);
         packet_32[3] = random_uint32();
 
@@ -142,47 +148,110 @@ optional<tracker_scrape> udp_scrape(const string& announce, const vector<string>
     if (not handshake_result.has_value()) return {};
     const auto& [ sock_fd, connection_id ] = handshake_result.value();
 
-    uint8_t packet_8[16 + 20 * info_hashes.size()];
-    auto *packet_32 = reinterpret_cast<uint32_t*>(packet_8);
-    auto *packet_64 = reinterpret_cast<uint64_t*>(packet_8);
-    packet_64[0] = connection_id;
-    packet_32[2] = htonl(act_scrape);
+    map<string, scrape_file> m;
+
+    uint8_t packet[16 + 20 * info_hashes.size()];
+    at<uint64_t>(packet, 0) = connection_id;
+    at<uint32_t>(packet, 0, 2) = htonl(act_scrape);
     const uint32_t transaction_id = random_uint32();
-    packet_32[3] = transaction_id;
+    at<uint32_t>(packet, 0, 3) = transaction_id;
 
     for (unsigned i = 0; i < info_hashes.size(); i++) {
         if (info_hashes[i].size() != 20)
             throw std::domain_error("All correct info hashes must be of size 20.");
         for (unsigned j = 0; j < 20; j++)
-            packet_8[16 + 20*i + j] = static_cast<uint8_t>(info_hashes[i][j]);
+            packet[16 + 20*i + j] = static_cast<uint8_t>(info_hashes[i][j]);
     }
 
-    write_all(sock_fd, reinterpret_cast<const char *>(packet_8), sizeof(packet_8));
+    write_all(sock_fd, reinterpret_cast<const char *>(packet), sizeof(packet));
 
-    uint8_t reply_8[8 + 12*info_hashes.size()];
-    auto *reply_32 = reinterpret_cast<uint32_t*>(reply_8);
+    uint8_t reply[8 + 12*info_hashes.size()];
 
-    int bytes_read = read(sock_fd, reply_8, sizeof(reply_8));
+    int bytes_read = read(sock_fd, reply, sizeof(reply));
     if (bytes_read <= 0) {
         std::cerr << "Managed to read only " << bytes_read << " bytes." << std::endl;
-        return {};
+        goto failure;
     }
 
-    map<string, scrape_file> m;
-
-    if (reply_32[0] != htonl(act_scrape)) return {};
-    if (reply_32[1] != transaction_id) return {};
-    if ((bytes_read - 8) % 12) return {};
-    auto *reply_shifted_32 = reinterpret_cast<uint32_t*>(reply_8 + 16);
+    if (at<uint32_t>(reply, 0, 0) != htonl(act_scrape)) goto failure;
+    if (at<uint32_t>(reply, 0, 1) != transaction_id) goto failure;
+    if ((bytes_read - 8) % 12) goto failure;
     for (unsigned i = 0; i < (bytes_read - 8)/12; i++) {
-        uint32_t complete   = ntohl(reply_shifted_32[3*i+0]),
-                 downloaded = ntohl(reply_shifted_32[3*i+1]),
-                 incomplete = ntohl(reply_shifted_32[3*i+2]);
+        uint32_t complete   = ntohl(at<uint32_t>(reply, 16, 3*i+0)),
+                 downloaded = ntohl(at<uint32_t>(reply, 16, 3*i+1)),
+                 incomplete = ntohl(at<uint32_t>(reply, 16, 3*i+2));
         m.insert({ info_hashes[i], { complete, downloaded, incomplete, {} }});
     }
 
     close(sock_fd);
     return { tracker_scrape( {}, m, {} ) };
+
+failure:
+    close(sock_fd);
+    return {};
+}
+
+optional<tracker_response> udp_announce(const tracker_request& req) {
+    const auto handshake_result = handshake(req.announce);
+    if (not handshake_result.has_value()) return {};
+    const auto& [ sock_fd, connection_id ] = handshake_result.value();
+
+    in_addr addr{};
+    if (req.ip.has_value()) {
+        int err = inet_pton(AF_INET, req.ip.value().c_str(), &addr);
+        if (err != 1) close(sock_fd);
+        if (err == 0) throw std::domain_error("IP address not in presentation format");
+        if (err != 1) throw std::domain_error("Cannot convert IP address");
+    }
+
+    uint8_t packet[100];
+    at<uint64_t>(packet, 0) = connection_id;
+    at<uint32_t>(packet, 0, 2) = htonl(act_announce);
+    const uint32_t transaction_id = random_uint32();
+    at<uint32_t>(packet, 0, 3) = transaction_id;
+    for (unsigned i = 0; i < 20; i++) packet[16+i] = req.info_hash[i];
+    for (unsigned i = 0; i < 20; i++) packet[16+20+i] = req.peer_id[i];
+    at<uint64_t>(packet, 16+40, 0) = htonll(req.downloaded);
+    at<uint64_t>(packet, 16+40, 1) = htonll(req.left);
+    at<uint64_t>(packet, 16+40, 2) = htonll(req.uploaded);
+    at<uint32_t>(packet, 16+40+24, 0) = htonll(
+            (!req.event.has_value())? 0
+                : (req.event.value() == completed)? 1
+                : (req.event.value() == started)? 2 : 3);
+    at<uint32_t>(packet, 16+40+24, 1) = req.ip.has_value() ? addr.s_addr : htonl(0);
+    at<uint32_t>(packet, 16+40+24, 2) = req.key.has_value() ? req.key.value() : random_uint32();
+    at<uint32_t>(packet, 16+40+24, 3) = req.numwant.has_value() ? htonl(req.numwant.value()) : htons(-1);
+    at<uint16_t>(packet, 16+40+24+16, 0) = htons(req.port);
+    at<uint16_t>(packet, 16+40+24+16, 1) = 0; // TODO extensions not supported
+
+    write_all(sock_fd, reinterpret_cast<const char *>(packet), sizeof(packet));
+
+    vector<peer> peers;
+
+    uint8_t reply[5*4+100*6];
+    int bytes_read = read(sock_fd, reply, sizeof(reply));
+    if (bytes_read <= 0) {
+        std::cerr << "Managed to read only " << bytes_read << " bytes." << std::endl;
+        goto failure;
+    }
+
+    if (bytes_read < 20) return {};
+    if ((bytes_read - 20) % 6) return {};
+    if (at<uint32_t>(reply, 0, 0) != htonl(act_announce)) return {};
+    if (at<uint32_t>(reply, 0, 1) != transaction_id) return {};
+    for (unsigned i = 0; i < (bytes_read - 20)/6; i++)
+        peers.emplace_back( optional<string>(),
+                            at<uint32_t>(reply, 20+6*i),
+                            at<uint16_t>(reply, 20 + 6*i + 4) );
+
+    close(sock_fd);
+    return { tracker_response({}, ntohl(at<uint32_t>(reply, 0, 2)),
+                                {}, {}, ntohl(at<uint32_t>(reply, 0, 4)),
+                                ntohl(at<uint32_t>(reply, 0, 3)), peers) };
+
+failure:
+    close(sock_fd);
+    return {};
 }
 
 #endif //NTORRENT_TRACKER_UDP_H

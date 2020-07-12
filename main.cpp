@@ -57,7 +57,15 @@ int main() {
     auto parsed = metainfo::parse(shared);
     cout << parsed << endl;
 
-    cout << udp_scrape(parsed.announce_list.value()[2][0], { metainfo::info_hash(shared, true) }).value() << endl;
+    // cout << udp_scrape(parsed.announce_list.value()[2][0], { metainfo::info_hash(shared, true) }).value() << endl;
+    cout << endl;
+    cout <<
+    udp_announce(tracker_request(
+            parsed.announce_list.value()[0][0],
+            metainfo::info_hash(shared, true),
+            string("01234567890123456789"), 50'723,
+            0, 0, 1252).set_numwant(2)).value()
+    << endl;
     return 0;
 
     assert( metainfo::info_hash(buffer.str(), shared) == metainfo::info_hash(shared) );

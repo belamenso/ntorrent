@@ -39,21 +39,21 @@ struct tracker_request {
     optional<bool> no_peer_id;
     optional<event_t> event;
     optional<string> ip;
-    optional<uint64_t> numwant;
+    optional<uint32_t> numwant;
     optional<uint32_t> key;
     optional<string> trackerid_urlencoded;
 
-    tracker_request(string info_hash, string peer_id, uint16_t port,
+    tracker_request(string announce, string info_hash, string peer_id, uint16_t port,
             uint64_t uploaded, uint64_t downloaded, uint64_t left)
-    : info_hash(std::move(info_hash)), peer_id(std::move(peer_id)),
+    : announce(std::move(announce)), info_hash(std::move(info_hash)), peer_id(std::move(peer_id)),
       port(port), uploaded(uploaded), downloaded(downloaded), left(left) {
-        if (peer_id.size() != 20) throw std::domain_error("peer_id should be 20 bytes long.");
-        if (info_hash.size() != 20) throw std::domain_error("info_hash should be 20 bytes long.");
+        if (this->peer_id.size() != 20) throw std::domain_error("peer_id should be 20 bytes long.");
+        if (this->info_hash.size() != 20) throw std::domain_error("info_hash should be 20 bytes long.");
     }
 
-    static tracker_request build(string info_hash_urlencoded, string peer_id_urlencoded, uint16_t port,
+    static tracker_request build(string announce, string info_hash_urlencoded, string peer_id_urlencoded, uint16_t port,
                                  uint64_t uploaded, uint64_t downloaded, uint64_t left) {
-        return tracker_request(std::move(info_hash_urlencoded), std::move(peer_id_urlencoded), port,
+        return tracker_request(std::move(announce), std::move(info_hash_urlencoded), std::move(peer_id_urlencoded), port,
                 uploaded, downloaded, left);
     }
 
@@ -77,7 +77,7 @@ struct tracker_request {
         return *this;
     }
 
-    tracker_request set_numwant(optional<uint64_t> numwant_) {
+    tracker_request set_numwant(optional<uint32_t> numwant_) {
         numwant = numwant_;
         return *this;
     }

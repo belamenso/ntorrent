@@ -21,14 +21,14 @@ using std::string, std::optional, std::vector, std::map;
 
 struct peer {
     const optional<string> peer_id;
-    const string ip;
-    const uint64_t port;
+    const uint32_t ip; // XXX net byte order
+    const uint16_t port; // XXX net byte order
 
-    peer(optional<string> peer_id, string ip, uint64_t port)
-    : peer_id(std::move(peer_id)), ip(std::move(ip)), port(port) {}
+    peer(optional<string> peer_id, uint32_t ip, uint16_t port)
+    : peer_id(std::move(peer_id)), ip(ip), port(port) {}
 
     friend std::ostream& operator << (std::ostream& os, const peer& p) {
-        os << "peer[ip: " << p.ip << ", port: " << p.port;
+        os << "peer[ip: " << ip_to_str(p.ip) << ", port: " << port_to_str(p.port);
         if (p.peer_id.has_value()) os << ", peer id: " << url_encode(p.peer_id.value());
         os << "]";
         return os;
@@ -105,19 +105,19 @@ struct tracker_response {
             assert (peers_list_ptr != nullptr);
             for (const auto& peer: peers_list_ptr->elements) {
                 const auto& peer_dict = *dynamic_cast<bdictionary*>(peer.get());
-                string peer_id, ip;
+                string peer_id, ip_str;
                 uint64_t port;
 
                 if (not peer_dict.has("peer id", bstring_t)) return {};
                 peer_id = peer_dict.get_string("peer id").value();
 
                 if (not peer_dict.has("ip", bstring_t)) return {};
-                ip = peer_dict.get_string("ip").value();
+                ip_str = peer_dict.get_string("ip").value();
 
                 if (not peer_dict.has("port", bint_t)) return {};
                 port = peer_dict.get_int("port").value();
 
-                peers.emplace_back( optional<string>(peer_id), ip, port );
+                peers.emplace_back( optional<string>(peer_id), str_to_u32(ip_str), port );
             }
         } else if (dict.has("peers", bstring_t)) {
             bstring* peers_str_ptr = dynamic_cast<bstring*>(dict.dict.at(bstring("peers")).get());
@@ -126,8 +126,8 @@ struct tracker_response {
             if (peers_str.size() % 6) return {};
 
             for (unsigned i = 0; i < peers_str.size(); i += 6) {
-                const string ip = bin_ip_to_string_ip(reinterpret_cast<const uint8_t*>(peers_str.c_str() + i));
-                const uint64_t port = bin_port_to_uint16(reinterpret_cast<const uint8_t*>(peers_str.c_str() + i + 4));
+                const uint32_t ip   = *reinterpret_cast<const uint32_t*>(peers_str.c_str() + i);
+                const uint16_t port = *reinterpret_cast<const uint16_t*>(peers_str.c_str() + i + 4);
                 peers.emplace_back( optional<string>(), ip, port );
             }
         } else {
