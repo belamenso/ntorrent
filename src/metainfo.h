@@ -52,20 +52,39 @@ struct file_description {
 };
 
 
+struct info {
+    const uint64_t piece_length;
+    const string pieces;
+    const vector<file_description> files;
+    const bool private_;
+
+    info(uint64_t piece_length, string pieces, vector<file_description> files, bool private_=false)
+    : piece_length(piece_length), pieces(std::move(pieces)), files(std::move(files)), private_(private_) {}
+
+    friend std::ostream& operator << (std::ostream& os, const info& mi) {
+        os << "{\n"
+           << "  piece length: " << human_readable_size(mi.piece_length) << "\n"
+           << "  pieces: " << (mi.pieces.size() >= 50 ?
+                               ("<<string of length " + std::to_string(mi.pieces.size()) + ">>") : bin_to_hex_string(mi.pieces)) << "\n"
+           << "  private: " << mi.private_ << "\n"
+           << "  files: [\n";
+        for (const auto& el: mi.files) os << "    " << el << "\n";
+        os << "  ]\n"
+           << "}" << endl;
+        return os;
+    }
+};
+
+
 class metainfo {
 protected:
-    metainfo(uint64_t piece_length, string pieces, vector<file_description> files, bool private_,
-             vector<vector<string>> announces, optional<uint64_t> creation_date, optional<string> comment,
-             optional<string> created_by, optional<string> encoding)
-    : piece_length(piece_length), pieces(std::move(pieces)), files(std::move(files)), private_(private_),
-    announces(std::move(announces)), creation_date(creation_date),
+    metainfo(info info, vector<vector<string>> announces, optional<uint64_t> creation_date,
+             optional<string> comment, optional<string> created_by, optional<string> encoding)
+    : info_(std::move(info)), announces(std::move(announces)), creation_date(creation_date),
     comment(std::move(comment)), created_by(std::move(created_by)), encoding(std::move(encoding)) {}
 
 public:
-    uint64_t piece_length;
-    string pieces;
-    vector<file_description> files;
-    bool private_ = false;
+    const info info_;
     vector<vector<string>> announces;
     optional<uint64_t> creation_date;
     optional<string> comment;
@@ -83,10 +102,10 @@ public:
         }
 
         os << "{\n"
-           << "  piece length: " << human_readable_size(mi.piece_length) << "\n"
-           << "  pieces: " << (mi.pieces.size() >= 50 ?
-                                ("<<string of length " + std::to_string(mi.pieces.size()) + ">>") : mi.pieces) << "\n"
-           << "  private: " << mi.private_ << "\n"
+           << "  piece length: " << human_readable_size(mi.info_.piece_length) << "\n"
+           << "  pieces: " << (mi.info_.pieces.size() >= 50 ?
+                                ("<<string of length " + std::to_string(mi.info_.pieces.size()) + ">>") : bin_to_hex_string(mi.info_.pieces)) << "\n"
+           << "  private: " << mi.info_.private_ << "\n"
            << "  announces: [\n";
             for (const vector<string>& els: mi.announces) {
                 os << "    [";
@@ -100,7 +119,7 @@ public:
            << ((not mi.created_by.has_value()) ? "" : ("  created by: " + mi.created_by.value() + "\n"))
            << ((not mi.encoding.has_value()) ? "" : ("  encoding: " + mi.encoding.value() + "\n"))
            << "  files: [\n";
-        for (const auto& el: mi.files) os << "    " << el << "\n";
+        for (const auto& el: mi.info_.files) os << "    " << el << "\n";
         os << "  ]\n"
            << "}" << endl;
         return os;
@@ -232,10 +251,10 @@ public:
                 announce_list.value() : vector<vector<string>>({vector<string>({announce})});
 
         return metainfo(
-                piece_length,
-                pieces,
-                files,
-                private_,
+                info(piece_length,
+                     pieces,
+                     files,
+                     private_),
                 announces,
                 creation_date,
                 comment,
