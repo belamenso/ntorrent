@@ -14,11 +14,11 @@ using std::string;
 string bin_to_hex_string(uint8_t const * data, unsigned size, bool lower_case=true) {
     const char* alphabet = lower_case? "0123456789abcdef" : "0123456789ABCDEF";
 
-    string ret;
+    string ret(2*size, '\0');
     for (unsigned i = 0; i < size; i++) {
         const uint8_t c = data[i];
-        ret += alphabet[c / 16u];
-        ret += alphabet[c & 15u];
+        ret[2*i+0] = alphabet[c / 16u];
+        ret[2*i+1] = alphabet[c & 15u];
     }
     return ret;
 }
@@ -33,6 +33,13 @@ string bin_ip_to_string_ip(const uint8_t* data) {
         ip += std::to_string(data[j]) + ".";
     ip.pop_back();
     return ip;
+}
+
+[[nodiscard]] string random_bytes(unsigned size) {
+    std::random_device engine;
+    string ret(size, '\0');
+    for (unsigned i = 0; i < size; i++) ret[i] = engine();
+    return ret;
 }
 
 [[nodiscard]] uint32_t random_uint32() {
