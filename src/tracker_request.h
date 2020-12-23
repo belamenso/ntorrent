@@ -48,7 +48,7 @@ struct tracker_request {
     : announce(std::move(announce)), info_hash(std::move(info_hash)), peer_id(std::move(peer_id)),
       port(port), uploaded(uploaded), downloaded(downloaded), left(left) {
         if (this->peer_id.size() != 20) throw std::domain_error("peer_id should be 20 bytes long.");
-        if (this->info_hash.size() != 20) throw std::domain_error("info_hash should be 20 bytes long.");
+        // if (this->info_hash.size() != 20) throw std::domain_error("info_hash should be 20 bytes long."); // TODO urlencoded perhaps should not?, TODO somehow encode this in the type system
     }
 
     static tracker_request build(string announce, string info_hash_urlencoded, string peer_id_urlencoded, uint16_t port,
@@ -95,7 +95,8 @@ struct tracker_request {
     [[nodiscard]] string http_request_url() const {
         std::stringstream ss;
         ss << announce << "?"
-           << "info_hash=" << url_encode(info_hash)
+           // << "info_hash=" << url_encode(info_hash)  // TODO hack
+           << "info_hash=" << info_hash
            << "&peer_id=" << url_encode(peer_id)
            << "&port=" << port
            << "&uploaded" << uploaded << "&downloaded" << downloaded << "&left" << left;

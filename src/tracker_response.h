@@ -21,14 +21,23 @@ using std::string, std::optional, std::vector, std::map;
 
 struct peer {
     const optional<string> peer_id;
-    const uint32_t ip; // XXX net byte order
+    const std::variant<uint32_t, __uint128_t> ip; // XXX net byte order
     const uint16_t port; // XXX net byte order
 
     peer(optional<string> peer_id, uint32_t ip, uint16_t port)
     : peer_id(std::move(peer_id)), ip(ip), port(port) {}
 
+    peer(optional<string> peer_id, __uint128_t ip, uint16_t port)
+    : peer_id(std::move(peer_id)), ip(ip), port(port) {}
+
+    [[nodiscard]] bool is_ipv6() const { return std::holds_alternative<__uint128_t>(this->ip); }
+    [[nodiscard]] bool is_ipv4() const { return std::holds_alternative<uint32_t>(this->ip); }
+
     friend std::ostream& operator << (std::ostream& os, const peer& p) {
-        os << "peer[ip: " << ip_to_str(p.ip) << ", port: " << port_to_str(p.port);
+        os << "peer[ip: ";
+        if (std::holds_alternative<uint32_t>(p.ip)) os << ip_to_str(std::get<uint32_t>(p.ip));
+        else os << ip_to_str(std::get<__uint128_t>(p.ip));
+        os << ", port: " << port_to_str(p.port);
         if (p.peer_id.has_value()) os << ", peer id: " << url_encode(p.peer_id.value());
         os << "]";
         return os;
@@ -41,13 +50,13 @@ struct tracker_response {
     const uint32_t interval;
     const optional<uint32_t> min_interval;
     const optional<string> tracker_id;
-    const uint32_t complete;
-    const uint32_t incomplete;
+    const optional<uint32_t> complete;
+    const optional<uint32_t> incomplete;
     const vector<peer> peers;
 
 
     tracker_response(optional<string> warning_message, uint32_t interval, optional<uint32_t> min_interval,
-            optional<string> tracker_id, uint32_t complete, uint32_t incomplete, vector<peer> peers)
+            optional<string> tracker_id, optional<uint32_t> complete, optional<uint32_t> incomplete, vector<peer> peers)
             : warning_message(std::move(warning_message)), interval(interval), min_interval(min_interval),
             tracker_id(std::move(tracker_id)), complete(complete), incomplete(incomplete), peers(std::move(peers)) {}
 
@@ -58,8 +67,8 @@ struct tracker_response {
            << "  interval: " << seconds_to_readable_str(r.interval) << "\n"
            << (r.min_interval.has_value() ? "  min interval: " + seconds_to_readable_str(r.min_interval.value()) + "\n" : "")
            << (r.tracker_id.has_value() ? "  tracker id: " + r.tracker_id.value() + "\n" : "")
-           << "  complete: " << r.complete << "\n"
-           << "  incomplete: " << r.incomplete << "\n"
+           << (r.complete.has_value() ? "  complete: " + std::to_string(r.complete.value()) + "\n" : "")
+           << (r.incomplete.has_value() ? "  incomplete: " + std::to_string(r.incomplete.value()) + "\n" : "")
            << "  peers: [\n";
         for (const peer& p: r.peers) os << "    " << p << "\n";
         os << "  ]\n"
@@ -78,8 +87,8 @@ struct tracker_response {
         uint32_t interval;
         optional<uint32_t> min_interval;
         optional<string> tracker_id;
-        uint32_t complete;
-        uint32_t incomplete;
+        optional<uint32_t> complete;
+        optional<uint32_t> incomplete;
         vector<peer> peers;
 
         if (dict.has("warning message", bstring_t))
@@ -94,11 +103,11 @@ struct tracker_response {
         if (dict.has("tracker id", bstring_t))
             tracker_id = { dict.get_string("tracker id").value() };
 
-        if (not dict.has("complete", bint_t)) return {};
-        complete = dict.get_int("complete").value();
+        if (dict.has("complete", bint_t))
+            complete = { dict.get_int("complete").value() };
 
-        if (not dict.has("incomplete", bint_t)) return {};
-        incomplete = dict.get_int("incomplete").value();
+        if (dict.has("incomplete", bint_t))
+            incomplete = { dict.get_int("incomplete").value() };
 
         if (dict.has("peers", blist_t)) {
             blist* peers_list_ptr = dynamic_cast<blist*>(dict.dict.at(bstring("peers")).get());
@@ -123,16 +132,29 @@ struct tracker_response {
             bstring* peers_str_ptr = dynamic_cast<bstring*>(dict.dict.at(bstring("peers")).get());
             assert(peers_str_ptr != nullptr);
             const string& peers_str = peers_str_ptr->value;
-            if (peers_str.size() % 6) return {};
+            if (peers_str.size() % (4+2)) return {};
 
-            for (unsigned i = 0; i < peers_str.size(); i += 6) {
+            for (unsigned i = 0; i < peers_str.size(); i += (4+2)) {
                 const uint32_t ip   = *reinterpret_cast<const uint32_t*>(peers_str.c_str() + i);
                 const uint16_t port = *reinterpret_cast<const uint16_t*>(peers_str.c_str() + i + 4);
                 peers.emplace_back( optional<string>(), ip, port );
             }
-        } else {
-            return {};
         }
+
+        if (dict.has("peers6", bstring_t)) {
+            bstring* peers6_str_ptr = dynamic_cast<bstring*>(dict.dict.at(bstring("peers6")).get());
+            assert(peers6_str_ptr != nullptr);
+            const string& peers6_str = peers6_str_ptr->value;
+            if (peers6_str.size() % (16+2)) return {};
+
+            for (unsigned i = 0; i < peers6_str.size(); i += (16+2)) {
+                const __uint128_t ip6 = *reinterpret_cast<const __uint128_t*>(peers6_str.c_str() + i);
+                const uint16_t port   = *reinterpret_cast<const uint16_t*>(peers6_str.c_str() + i + 16);
+                peers.emplace_back( optional<string>(), ip6, port );
+            }
+        }
+
+        if (peers.empty()) return {};
 
         return { tracker_response( warning_message, interval, min_interval, tracker_id, complete, incomplete, peers ) };
     };

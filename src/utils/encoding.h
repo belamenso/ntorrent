@@ -66,6 +66,57 @@ string ip_to_str(uint32_t ip) {
     return ret;
 }
 
+string ip_to_str(__uint128_t ip) {
+    string ret;
+    const auto* bytes = reinterpret_cast<uint8_t*>(&ip);
+    vector<string> repr(8, "");
+    for (unsigned i = 0; i < 16; i += 2) {
+        repr[i/2] = bin_to_hex_string(bytes + i, 2, false);
+    }
+    for (unsigned i = 0; i < 8; i++) {
+        for (unsigned _ = 0; _ < 3; _++) {
+            if (repr[i][0] == '0') {
+                repr[i] = repr[i].substr(1);
+            } else break;
+        }
+    }
+
+    int best_idx = -1, best_length = 0;
+    int curr_idx = -1, curr_length = 0;
+    for (int i = 0; i < 8; i++) {
+        if (curr_idx != -1) {
+            if (repr[i] == string("0")) {
+                curr_length += 1;
+            } else {
+                if (curr_length > best_length) {
+                    best_idx = curr_idx;
+                    best_length = curr_length;
+                }
+                curr_idx = -1;
+                curr_length = 0;
+            }
+        } else {
+            if (repr[i] == string("0")) {
+                curr_idx = i;
+                curr_length = 0;
+            } else {
+
+            }
+        }
+    }
+
+    for (unsigned i = 0; i < 8; i++) {
+        if (i == best_idx) {
+            ret += "::";
+            i += best_length;
+        } else {
+            if (not ret.empty() and ret[ret.length()-1] != ':') ret += ':';
+            ret += repr[i];
+        }
+    }
+    return ret;
+}
+
 string port_to_str(uint16_t port) {
     return std::to_string(ntohs(port));
 }
