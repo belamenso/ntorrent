@@ -18,7 +18,7 @@ protocols. Mostly for educational purposes.
 - [x] metainfo parser
 - [x] TCP tracker protocol
     - [x] Tracker Returns Compact Peer Lists ([BEP_23](http://bittorrent.org/beps/bep_0023.html))
-- [ ] TCP tracker protocol ([BEP_15](http://bittorrent.org/beps/bep_0015.html))
+- [ ] UDP tracker protocol ([BEP_15](http://bittorrent.org/beps/bep_0015.html))
     - [x] IPv4
     - [ ] IPv6
 - [ ] main client
